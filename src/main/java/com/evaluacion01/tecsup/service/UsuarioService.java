@@ -7,5 +7,5 @@ public interface UsuarioService {
     List<Usuario> listarTodos();
     Usuario obtenerPorId(Long id);
     Usuario registrarUsuario(Usuario usuario);
-    Usuario actualizarUsuario(Long id, Usuario usuarioDetalles);
+    Usuario actualizarUsuario(Long id, Usuario usuario);
 }

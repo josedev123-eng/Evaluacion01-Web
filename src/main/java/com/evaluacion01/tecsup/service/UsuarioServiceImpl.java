@@ -28,37 +28,32 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
     }
 
-    // RF-USR-01: Registrar Usuario
     @Override
     public Usuario registrarUsuario(Usuario usuario) {
-        if (usuarioRepository.existsByUsuario(usuario.getUsuario())) {
-            throw new RuntimeException("El nombre de usuario ya está registrado");
-        }
-        if (usuarioRepository.existsByCorreo(usuario.getCorreo())) {
-            throw new RuntimeException("El correo ya está registrado");
-        }
         return usuarioRepository.save(usuario);
     }
 
-    // RF-USR-02: Modificar Usuario
     @Override
-    public Usuario actualizarUsuario(Long id, Usuario usuarioDetalles) {
+    public Usuario actualizarUsuario(Long id, Usuario usuarioActualizado) {
         Usuario usuarioExistente = obtenerPorId(id);
 
-        usuarioExistente.setNombres(usuarioDetalles.getNombres());
-        usuarioExistente.setApellidos(usuarioDetalles.getApellidos());
-        usuarioExistente.setDni(usuarioDetalles.getDni());
-        usuarioExistente.setCorreo(usuarioDetalles.getCorreo());
-        usuarioExistente.setTelefono(usuarioDetalles.getTelefono());
-        usuarioExistente.setUsuario(usuarioDetalles.getUsuario());
+        usuarioExistente.setNombres(usuarioActualizado.getNombres());
+        usuarioExistente.setApellidos(usuarioActualizado.getApellidos());
+        usuarioExistente.setDni(usuarioActualizado.getDni());
+        usuarioExistente.setCorreo(usuarioActualizado.getCorreo());
+        usuarioExistente.setTelefono(usuarioActualizado.getTelefono());
+        usuarioExistente.setUsuario(usuarioActualizado.getUsuario());
 
-        if (usuarioDetalles.getContrasena() != null && !usuarioDetalles.getContrasena().isEmpty()) {
-            usuarioExistente.setContrasena(usuarioDetalles.getContrasena());
+        if (usuarioActualizado.getContrasena() != null && !usuarioActualizado.getContrasena().isEmpty()) {
+            usuarioExistente.setContrasena(usuarioActualizado.getContrasena());
         }
 
-        usuarioExistente.setArea(usuarioDetalles.getArea());
-        usuarioExistente.setEstado(usuarioDetalles.getEstado());
-        usuarioExistente.setRol(usuarioDetalles.getRol());
+        usuarioExistente.setArea(usuarioActualizado.getArea());
+        usuarioExistente.setEstado(usuarioActualizado.getEstado());
+
+        if (usuarioActualizado.getRol() != null) {
+            usuarioExistente.setRol(usuarioActualizado.getRol());
+        }
 
         return usuarioRepository.save(usuarioExistente);
     }
