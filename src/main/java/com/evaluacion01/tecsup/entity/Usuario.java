@@ -26,11 +26,9 @@ public class Usuario {
     @JoinColumn(name = "id_rol")
     private Rol rol;
 
-    // Constructor vacío (Requerido por JPA)
     public Usuario() {
     }
 
-    // Constructor completo
     public Usuario(Long idUsuario, String nombres, String apellidos, String dni, String correo,
                    String telefono, String usuario, String contrasena, String area,
                    Boolean estado, LocalDateTime fechaRegistro, LocalDateTime ultimoAcceso, Rol rol) {
@@ -49,7 +47,6 @@ public class Usuario {
         this.rol = rol;
     }
 
-    // Getters y Setters
     public Long getIdUsuario() {
         return idUsuario;
     }

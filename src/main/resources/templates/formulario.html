@@ -7,10 +7,39 @@
 </head>
 <body class="container mt-4">
 
-<h2 th:text="${usuario.idUsuario == null} ? 'Registrar Usuario' : 'Editar Usuario'"></h2>
+<h2>Usuarios registrados</h2>
+<table class="table table-striped">
+    <thead>
+    <tr>
+        <th>Nombres</th>
+        <th>Apellidos</th>
+        <th>Correo</th>
+        <th>Rol</th>
+        <th>Estado</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="u : ${listaUsuarios}">
+        <td th:text="${u.nombres}"></td>
+        <td th:text="${u.apellidos}"></td>
+        <td th:text="${u.correo}"></td>
+        <td th:text="${u.rol != null ? u.rol.nombre : '-'}"></td>
+        <td th:text="${u.estado} ? 'Activo' : 'Inactivo'"></td>
+        <td>
+            <a th:href="@{/usuarios/editar/{id}(id=${u.idUsuario})}" class="btn btn-sm btn-outline-primary">Editar</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
 
-<form th:action="${usuario.idUsuario == null} ? @{/usuarios/guardar} : @{/usuarios/actualizar/{id}(id=${usuario.idUsuario})}"
-      th:object="${usuario}" method="post" class="mt-3">
+<hr/>
+
+<h2 th:text="${usuarioForm.idUsuario == null} ? 'Registrar Usuario' : 'Editar Usuario'"></h2>
+
+<form th:action="@{/usuarios/guardar}" th:object="${usuarioForm}" method="post" class="mt-3">
+
+    <input type="hidden" th:field="*{idUsuario}" />
 
     <div class="row">
         <div class="col-md-6 mb-3">
@@ -45,20 +74,27 @@
         </div>
         <div class="col-md-6 mb-3">
             <label class="form-label">Contraseña:</label>
-            <input type="password" th:field="*{contrasena}" class="form-control" th:required="${usuario.idUsuario == null}" />
+            <input type="password" th:field="*{contrasena}" class="form-control" th:required="${usuarioForm.idUsuario == null}" />
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-6 mb-3">
+        <div class="col-md-4 mb-3">
             <label class="form-label">Área:</label>
             <input type="text" th:field="*{area}" class="form-control" />
         </div>
-        <div class="col-md-6 mb-3">
+        <div class="col-md-4 mb-3">
             <label class="form-label">Rol:</label>
             <select th:field="*{rol.idRol}" class="form-select" required>
                 <option value="">-- Seleccione un Rol --</option>
                 <option th:each="r : ${roles}" th:value="${r.idRol}" th:text="${r.nombre}"></option>
+            </select>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Estado:</label>
+            <select th:field="*{estado}" class="form-select" required>
+                <option th:value="true">Activo</option>
+                <option th:value="false">Inactivo</option>
             </select>
         </div>
     </div>

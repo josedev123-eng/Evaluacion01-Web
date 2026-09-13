@@ -2,6 +2,7 @@ package com.evaluacion01.tecsup.service;
 
 import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.repository.UsuarioRepository;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.util.List;
 public class UsuarioServiceImpl implements UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @Autowired
     public UsuarioServiceImpl(UsuarioRepository usuarioRepository) {
