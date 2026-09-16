@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - BD Hospital</title>
+    <style>
+        body { font-family: Segoe UI, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 340px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
+        button { width: 100%; padding: 10px; background-color: #0d6efd; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 15px; }
+        button:hover { background-color: #0b5ed7; }
+        .alert-error { background-color: #f8d7da; color: #842029; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 14px; text-align: center; border: 1px solid #f5c2c7; }
+        .alert-success { background-color: #d1e7dd; color: #0f5132; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 14px; text-align: center; border: 1px solid #badbcc; }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h2 style="text-align: center; margin-bottom: 20px;">Iniciar Sesión</h2>
+
+    <div class="alert-error" th:if="${error != null and !error.isEmpty()}" th:text="${error}"></div>
+
+    <div class="alert-success" th:if="${mensajeLogout != null and !mensajeLogout.isEmpty()}" th:text="${mensajeLogout}"></div>
+
+    <form th:action="@{/login}" method="post">
+        <div class="form-group">
+            <label for="identificador">Usuario o Correo:</label>
+            <input type="text" id="identificador" name="identificador" th:value="${identificadorPrevio}" placeholder="Ej: admin o admin@hospital.com" />
+        </div>
+
+        <div class="form-group">
+            <label for="contrasena">Contraseña:</label>
+            <input type="password" id="contrasena" name="contrasena" placeholder="••••••••" />
+        </div>
+
+        <button type="submit">Ingresar</button>
+    </form>
+</div>
+
+</body>
+</html>

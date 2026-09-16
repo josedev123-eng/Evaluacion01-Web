@@ -32,6 +32,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public Usuario registrarUsuario(Usuario usuario) {
+        usuario.setContrasena(encoder.encode(usuario.getContrasena()));
         return usuarioRepository.save(usuario);
     }
 
@@ -47,7 +48,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         usuarioExistente.setUsuario(usuarioActualizado.getUsuario());
 
         if (usuarioActualizado.getContrasena() != null && !usuarioActualizado.getContrasena().isEmpty()) {
-            usuarioExistente.setContrasena(usuarioActualizado.getContrasena());
+            usuarioExistente.setContrasena(encoder.encode(usuarioActualizado.getContrasena()));
         }
 
         usuarioExistente.setArea(usuarioActualizado.getArea());

@@ -10,6 +10,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Controller
 @RequestMapping("/usuarios")
 public class UsuarioController {
@@ -52,5 +54,29 @@ public class UsuarioController {
             usuarioService.registrarUsuario(usuario);
         }
         return "redirect:/usuarios";
+    }
+
+    @GetMapping("/api")
+    @ResponseBody
+    public List<Usuario> listarApi() {
+        return usuarioService.listarTodos();
+    }
+
+    @GetMapping("/api/{id}")
+    @ResponseBody
+    public Usuario obtenerPorIdApi(@PathVariable Long id) {
+        return usuarioService.obtenerPorId(id);
+    }
+
+    @PostMapping("/api/guardar")
+    @ResponseBody
+    public Usuario registrarApi(@RequestBody Usuario usuario) {
+        return usuarioService.registrarUsuario(usuario);
+    }
+
+    @PutMapping("/api/actualizar/{id}")
+    @ResponseBody
+    public Usuario actualizarApi(@PathVariable Long id, @RequestBody Usuario usuario) {
+        return usuarioService.actualizarUsuario(id, usuario);
     }
 }
