@@ -8,4 +8,5 @@ public interface UsuarioService {
     Usuario obtenerPorId(Long id);
     Usuario registrarUsuario(Usuario usuario);
     Usuario actualizarUsuario(Long id, Usuario usuario);
+    Usuario cambiarEstado(Long id);
 }

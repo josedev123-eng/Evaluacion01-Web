@@ -20,7 +20,7 @@ public class LoginController {
     @GetMapping({"/", "/login"})
     public String showLoginForm(HttpSession session) {
         if (session.getAttribute("usuarioLogueado") != null) {
-            return "redirect:/usuarios";
+            return "redirect:/dashboard";
         }
         return "login";
     }
@@ -33,12 +33,22 @@ public class LoginController {
         try {
             Usuario usuario = authService.autenticar(identificador, contrasena);
             session.setAttribute("usuarioLogueado", usuario);
-            return "redirect:/usuarios";
+            return "redirect:/dashboard";
         } catch (Exception e) {
             model.addAttribute("error", e.getMessage());
             model.addAttribute("identificadorPrevio", identificador);
             return "login";
         }
+    }
+
+    @GetMapping("/dashboard")
+    public String showDashboard(HttpSession session, Model model) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogueado");
+        if (usuario == null) {
+            return "redirect:/login";
+        }
+        model.addAttribute("usuario", usuario);
+        return "dashboard";
     }
 
     @GetMapping("/logout")

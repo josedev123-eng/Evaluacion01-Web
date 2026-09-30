@@ -1,9 +1,14 @@
 package com.evaluacion01.tecsup.repository;
 
-import com.evaluacion01.tecsup.entity.Rol;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.Optional;
 
-@Repository
-public interface RolRepository extends JpaRepository<Rol, Long> {
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.evaluacion01.tecsup.entity.Rol;
+
+public interface RolRepository extends JpaRepository<Rol, Integer> {
+
+    Optional<Rol> findByNombreIgnoreCase(String nombre);
+
+    boolean existsByNombreIgnoreCase(String nombre);
 }

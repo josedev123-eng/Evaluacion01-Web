@@ -2,21 +2,23 @@ package com.evaluacion01.tecsup.service;
 
 import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.repository.UsuarioRepository;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class UsuarioServiceImpl implements UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UsuarioServiceImpl(UsuarioRepository usuarioRepository) {
+    public UsuarioServiceImpl(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -32,7 +34,11 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public Usuario registrarUsuario(Usuario usuario) {
-        usuario.setContrasena(encoder.encode(usuario.getContrasena()));
+        usuario.setContrasena(passwordEncoder.encode(usuario.getContrasena()));
+        usuario.setFechaRegistro(LocalDateTime.now());
+        if (usuario.getEstado() == null) {
+            usuario.setEstado(true);
+        }
         return usuarioRepository.save(usuario);
     }
 
@@ -48,16 +54,26 @@ public class UsuarioServiceImpl implements UsuarioService {
         usuarioExistente.setUsuario(usuarioActualizado.getUsuario());
 
         if (usuarioActualizado.getContrasena() != null && !usuarioActualizado.getContrasena().isEmpty()) {
-            usuarioExistente.setContrasena(encoder.encode(usuarioActualizado.getContrasena()));
+            usuarioExistente.setContrasena(passwordEncoder.encode(usuarioActualizado.getContrasena()));
         }
 
         usuarioExistente.setArea(usuarioActualizado.getArea());
-        usuarioExistente.setEstado(usuarioActualizado.getEstado());
 
-        if (usuarioActualizado.getRol() != null) {
+        if (usuarioActualizado.getEstado() != null) {
+            usuarioExistente.setEstado(usuarioActualizado.getEstado());
+        }
+
+        if (usuarioActualizado.getRol() != null && usuarioActualizado.getRol().getIdRol() != null) {
             usuarioExistente.setRol(usuarioActualizado.getRol());
         }
 
         return usuarioRepository.save(usuarioExistente);
+    }
+
+    @Override
+    public Usuario cambiarEstado(Long id) {
+        Usuario usuario = obtenerPorId(id);
+        usuario.setEstado(!Boolean.TRUE.equals(usuario.getEstado()));
+        return usuarioRepository.save(usuario);
     }
 }

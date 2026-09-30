@@ -1,153 +1,71 @@
 package com.evaluacion01.tecsup.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "usuarios")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_usuario")
     private Long idUsuario;
 
+    @Column(nullable = false, length = 100)
     private String nombres;
+
+    @Column(nullable = false, length = 100)
     private String apellidos;
+
+    @Column(unique = true, length = 15)
     private String dni;
+
+    @Column(nullable = false, unique = true, length = 100)
     private String correo;
+
+    @Column(length = 20)
     private String telefono;
+
+    @Column(nullable = false, unique = true, length = 50)
     private String usuario;
+
+    @Column(nullable = false, length = 255)
     private String contrasena;
+
+    @Column(length = 100)
     private String area;
-    private Boolean estado;
-    private LocalDateTime fechaRegistro;
+
+    @Column(nullable = false)
+    private Boolean estado = true;
+
+    @Column(name = "fecha_registro", updatable = false)
+    private LocalDateTime fechaRegistro = LocalDateTime.now();
+
+    @Column(name = "ultimo_acceso")
     private LocalDateTime ultimoAcceso;
 
     @ManyToOne
-    @JoinColumn(name = "id_rol")
+    @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
 
-    public Usuario() {
-    }
+    @Column(name = "reset_token")
+    private String resetToken;
 
-    public Usuario(Long idUsuario, String nombres, String apellidos, String dni, String correo,
-                   String telefono, String usuario, String contrasena, String area,
-                   Boolean estado, LocalDateTime fechaRegistro, LocalDateTime ultimoAcceso, Rol rol) {
-        this.idUsuario = idUsuario;
-        this.nombres = nombres;
-        this.apellidos = apellidos;
-        this.dni = dni;
-        this.correo = correo;
-        this.telefono = telefono;
-        this.usuario = usuario;
-        this.contrasena = contrasena;
-        this.area = area;
-        this.estado = estado;
-        this.fechaRegistro = fechaRegistro;
-        this.ultimoAcceso = ultimoAcceso;
-        this.rol = rol;
-    }
-
-    public Long getIdUsuario() {
-        return idUsuario;
-    }
-
-    public void setIdUsuario(Long idUsuario) {
-        this.idUsuario = idUsuario;
-    }
-
-    public String getNombres() {
-        return nombres;
-    }
-
-    public void setNombres(String nombres) {
-        this.nombres = nombres;
-    }
-
-    public String getApellidos() {
-        return apellidos;
-    }
-
-    public void setApellidos(String apellidos) {
-        this.apellidos = apellidos;
-    }
-
-    public String getDni() {
-        return dni;
-    }
-
-    public void setDni(String dni) {
-        this.dni = dni;
-    }
-
-    public String getCorreo() {
-        return correo;
-    }
-
-    public void setCorreo(String correo) {
-        this.correo = correo;
-    }
-
-    public String getTelefono() {
-        return telefono;
-    }
-
-    public void setTelefono(String telefono) {
-        this.telefono = telefono;
-    }
-
-    public String getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(String usuario) {
-        this.usuario = usuario;
-    }
-
-    public String getContrasena() {
-        return contrasena;
-    }
-
-    public void setContrasena(String contrasena) {
-        this.contrasena = contrasena;
-    }
-
-    public String getArea() {
-        return area;
-    }
-
-    public void setArea(String area) {
-        this.area = area;
-    }
-
-    public Boolean getEstado() {
-        return estado;
-    }
-
-    public void setEstado(Boolean estado) {
-        this.estado = estado;
-    }
-
-    public LocalDateTime getFechaRegistro() {
-        return fechaRegistro;
-    }
-
-    public void setFechaRegistro(LocalDateTime fechaRegistro) {
-        this.fechaRegistro = fechaRegistro;
-    }
-
-    public LocalDateTime getUltimoAcceso() {
-        return ultimoAcceso;
-    }
-
-    public void setUltimoAcceso(LocalDateTime ultimoAcceso) {
-        this.ultimoAcceso = ultimoAcceso;
-    }
-
-    public Rol getRol() {
-        return rol;
-    }
-
-    public void setRol(Rol rol) {
-        this.rol = rol;
-    }
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
 }
