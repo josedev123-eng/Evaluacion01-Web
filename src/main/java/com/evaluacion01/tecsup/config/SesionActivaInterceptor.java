@@ -51,6 +51,7 @@ public class SesionActivaInterceptor implements HandlerInterceptor {
     private boolean esRutaProtegida(HttpServletRequest request) {
         String ruta = request.getRequestURI().substring(request.getContextPath().length());
         return "/dashboard".equals(ruta) || "/usuarios".equals(ruta) || ruta.startsWith("/usuarios/")
+                || "/auditoria".equals(ruta) || ruta.startsWith("/auditoria/")
                 || "/roles".equals(ruta) || ruta.startsWith("/roles/");
     }
 }

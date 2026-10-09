@@ -62,4 +62,22 @@ que puedan contener SQL, datos personales o secretos.
 Las operaciones conservan todas las protecciones de Sovero. Se ejecuta `flush`
 antes de informar éxito para detectar violaciones de integridad dentro de la
 operación, y los éxitos se revierten junto con el cambio si la transacción falla.
-La consulta administrativa se incorpora en RF-AUD-02.
+
+## Consulta administrativa (RF-AUD-02)
+
+Inicia sesión como Administrador y entra a **Auditoría** en el menú o a `/auditoria`.
+Funciona si Administrador es el rol principal o uno adicional. La autorización
+recarga la cuenta y sus roles de la base: revocar el rol impide nuevas consultas.
+Tener un permiso llamado `auditoria / VER` no habilita a un no-administrador.
+
+- Solo lectura; ninguna ruta permite editar, borrar o exportar todos los datos.
+- Filtros combinables por módulo, resultado, parte del nombre del ejecutor y fechas.
+  `%` y `_` se buscan como texto literal, no como comodines SQL.
+- Fechas UTC, desde las 00:00 del día inicial hasta el final del día final incluido.
+  Se validan el orden, el formato y los años (1900–9998, por límites de MySQL).
+- 25 registros por defecto, hasta 100 por página, ordenados por fecha e ID descendentes.
+  Los enlaces de paginación conservan los filtros y la página no puede ser negativa.
+- Parámetros inválidos devuelven una vista con error controlado (HTTP 400), sin ejecutar la consulta.
+- La vista escapa el texto almacenado, no renderiza HTML del historial y usa `Cache-Control: no-store`.
+- El menú se muestra solo a administradores. La URL directa y el servicio también
+  verifican autorización. Los accesos denegados quedan registrados sin entregar datos.

@@ -135,6 +135,7 @@ public class AutorizacionService {
     }
 
     private boolean esPermisoReservado(String modulo, String permiso) {
-        return "roles".equalsIgnoreCase(modulo) && "EDITAR".equalsIgnoreCase(permiso);
+        return ("roles".equalsIgnoreCase(modulo) && "EDITAR".equalsIgnoreCase(permiso))
+                || "auditoria".equalsIgnoreCase(modulo);
     }
 }
