@@ -114,6 +114,13 @@ existente (incluyendo cambiar su contraseña o su rol) sin crear uno nuevo.
 - [`UsuarioRepository.buscar()`](src/main/java/com/evaluacion01/tecsup/repository/UsuarioRepository.java): el texto busca en nombres, apellidos, nombre completo, DNI, correo y usuario; el rol coincide si es el principal o uno adicional.
 - Barra de filtros encima de la tabla en [`formulario.html`](src/main/resources/templates/formulario.html), con botón para limpiarlos.
 
+
+### Validaciones y pruebas del backend de usuarios
+**Responsable:** Jose Rojas Condor
+- [`UsuarioServiceImpl.validarDatos()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java) limpia espacios y valida obligatorios (nombres, apellidos, correo, usuario, área, rol principal), formatos (correo, DNI de 8 dígitos, teléfono, usuario, contraseña de 6+ caracteres) y duplicados de usuario, correo y DNI antes de guardar, sin distinguir mayúsculas. Al editar, los datos propios no cuentan como duplicado.
+- DNI y teléfono vacíos se guardan como `NULL`, para que dos usuarios sin DNI no choquen con la restricción `UNIQUE`.
+- [`UsuarioGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuarioGestionIntegrationTests.java): rol principal guardado en `usuarios.id_rol` al registrar y editar, FK que rechaza roles inexistentes y protege roles en uso, registro, listado, búsqueda, edición, activación/desactivación, multirrol, validaciones y protecciones de administradores.
+
 ### RF-ROL-01 — El administrador registra y modifica roles
 **Responsable:** Sovero Campoverde Karim Alexander
 **Para qué sirve:** permite crear los roles del sistema (por ejemplo "Administrador",

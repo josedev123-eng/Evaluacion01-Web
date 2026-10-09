@@ -16,9 +16,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class UsuarioServiceImpl implements UsuarioService {
+
+    private static final Pattern CORREO = Pattern.compile("^[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+$");
+    private static final Pattern DNI = Pattern.compile("^\\d{8}$");
+    private static final Pattern TELEFONO = Pattern.compile("^\\+?[\\d ]{6,20}$");
+    private static final Pattern NOMBRE_USUARIO = Pattern.compile("^[A-Za-z0-9._-]{3,50}$");
+    private static final int LONGITUD_MINIMA_CONTRASENA = 6;
 
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
@@ -60,12 +67,14 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Transactional
     public Usuario registrarUsuario(Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador) {
         try {
+            validarDatos(usuario, null);
             Rol principal = obtenerRolPrincipal(usuario);
             Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuario.getArea());
             autorizacionService.validarAsignacionRoles(operador, null, roles);
             if (usuario.getContrasena() == null || usuario.getContrasena().isBlank()) {
                 throw new IllegalArgumentException("La contraseña es obligatoria para registrar un usuario.");
             }
+            validarContrasena(usuario.getContrasena());
             // No persistir id, estado, tokens ni asociaciones enviados fuera del formulario.
             Usuario nuevo = new Usuario();
             copiarDatosPersonales(usuario, nuevo);
@@ -91,6 +100,10 @@ public class UsuarioServiceImpl implements UsuarioService {
         try {
             Usuario usuarioExistente = obtenerPorId(id);
             autorizacionService.validarEdicionUsuario(operador, usuarioExistente);
+            validarDatos(usuarioActualizado, id);
+            if (usuarioActualizado.getContrasena() != null && !usuarioActualizado.getContrasena().isEmpty()) {
+                validarContrasena(usuarioActualizado.getContrasena());
+            }
             Rol principal = obtenerRolPrincipal(usuarioActualizado);
             Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuarioActualizado.getArea());
             autorizacionService.validarAsignacionRoles(operador, usuarioExistente, roles);
@@ -178,6 +191,74 @@ public class UsuarioServiceImpl implements UsuarioService {
     private void validarArea(Rol rol, String area) {
         if (area == null || rol.getArea() == null || !rol.getArea().equalsIgnoreCase(area.trim())) {
             throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' no corresponde al área elegida.");
+        }
+    }
+
+    // Normaliza los textos del formulario y valida obligatorios, formatos y duplicados.
+    // idExcluido es el propio usuario al editar, para que conservar sus datos no cuente como duplicado.
+    private void validarDatos(Usuario usuario, Long idExcluido) {
+        usuario.setNombres(obligatorio(usuario.getNombres(), "nombres", 100));
+        usuario.setApellidos(obligatorio(usuario.getApellidos(), "apellidos", 100));
+        usuario.setCorreo(obligatorio(usuario.getCorreo(), "correo", 100).toLowerCase());
+        usuario.setUsuario(obligatorio(usuario.getUsuario(), "usuario", 50));
+        usuario.setArea(obligatorio(usuario.getArea(), "área", 100));
+        usuario.setDni(opcional(usuario.getDni()));
+        usuario.setTelefono(opcional(usuario.getTelefono()));
+
+        if (!CORREO.matcher(usuario.getCorreo()).matches()) {
+            throw new IllegalArgumentException("El correo no tiene un formato válido.");
+        }
+        if (!NOMBRE_USUARIO.matcher(usuario.getUsuario()).matches()) {
+            throw new IllegalArgumentException("El usuario debe tener de 3 a 50 caracteres: letras, números, punto, guion o guion bajo.");
+        }
+        if (usuario.getDni() != null && !DNI.matcher(usuario.getDni()).matches()) {
+            throw new IllegalArgumentException("El DNI debe tener 8 dígitos.");
+        }
+        if (usuario.getTelefono() != null && !TELEFONO.matcher(usuario.getTelefono()).matches()) {
+            throw new IllegalArgumentException("El teléfono solo puede tener dígitos, espacios y un + inicial.");
+        }
+
+        boolean usuarioRepetido = idExcluido == null
+                ? usuarioRepository.existsByUsuarioIgnoreCase(usuario.getUsuario())
+                : usuarioRepository.existsByUsuarioIgnoreCaseAndIdUsuarioNot(usuario.getUsuario(), idExcluido);
+        if (usuarioRepetido) {
+            throw new IllegalArgumentException("Ya existe un usuario con ese nombre de usuario.");
+        }
+        boolean correoRepetido = idExcluido == null
+                ? usuarioRepository.existsByCorreoIgnoreCase(usuario.getCorreo())
+                : usuarioRepository.existsByCorreoIgnoreCaseAndIdUsuarioNot(usuario.getCorreo(), idExcluido);
+        if (correoRepetido) {
+            throw new IllegalArgumentException("Ya existe un usuario con ese correo.");
+        }
+        if (usuario.getDni() != null) {
+            boolean dniRepetido = idExcluido == null
+                    ? usuarioRepository.existsByDni(usuario.getDni())
+                    : usuarioRepository.existsByDniAndIdUsuarioNot(usuario.getDni(), idExcluido);
+            if (dniRepetido) {
+                throw new IllegalArgumentException("Ya existe un usuario con ese DNI.");
+            }
+        }
+    }
+
+    private String obligatorio(String valor, String campo, int longitudMaxima) {
+        if (valor == null || valor.isBlank()) {
+            throw new IllegalArgumentException("El campo " + campo + " es obligatorio.");
+        }
+        String limpio = valor.trim();
+        if (limpio.length() > longitudMaxima) {
+            throw new IllegalArgumentException("El campo " + campo + " admite como máximo " + longitudMaxima + " caracteres.");
+        }
+        return limpio;
+    }
+
+    // DNI y teléfono vacíos se guardan como NULL: dni es UNIQUE y dos "" chocarían entre sí.
+    private String opcional(String valor) {
+        return (valor == null || valor.isBlank()) ? null : valor.trim();
+    }
+
+    private void validarContrasena(String contrasena) {
+        if (contrasena.length() < LONGITUD_MINIMA_CONTRASENA) {
+            throw new IllegalArgumentException("La contraseña debe tener al menos " + LONGITUD_MINIMA_CONTRASENA + " caracteres.");
         }
     }
 
