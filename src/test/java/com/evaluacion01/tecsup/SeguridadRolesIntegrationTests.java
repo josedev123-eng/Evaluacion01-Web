@@ -17,6 +17,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashSet;
@@ -29,8 +30,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// Seguridad del backend: accesos permitidos y rechazados según el rol, roles inactivos
-// y protección del último administrador activo.
+// Seguridad del backend: accesos permitidos y rechazados según el rol, roles inactivos,
+// protección del último administrador activo y redirección posterior al login.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -197,6 +198,56 @@ class SeguridadRolesIntegrationTests {
         assertThat(administrador.isActivo()).isTrue();
         assertThat(usuarios.contarActivosConRol("Administrador")).isEqualTo(1);
         assertThat(autorizacion.esAdministrador(admin)).isTrue();
+    }
+
+    // ---- Redirección posterior al login ----
+
+    @Test
+    void elLoginRedirigeAlModuloQueCorrespondeSegunElRol() throws Exception {
+        login(admin).andExpect(redirectedUrl("/dashboard"));
+        login(operador).andExpect(redirectedUrl("/usuarios"));
+        login(lector).andExpect(redirectedUrl("/usuarios"));
+        login(clinico).andExpect(redirectedUrl("/dashboard"));
+        login(recepcion).andExpect(redirectedUrl("/dashboard"));
+    }
+
+    @Test
+    void unRolQueSoloConsultaRolesEntraAlModuloDeRoles() throws Exception {
+        Rol consultor = rol("Consultor de roles", "Administración", permisos.findAll().stream()
+                .filter(p -> "roles".equals(p.getModulo())).findFirst().orElseThrow());
+        Usuario consulta = usuario("consulta", consultor);
+        usuarios.flush();
+
+        login(consulta).andExpect(redirectedUrl("/roles"));
+    }
+
+    @Test
+    void conElRolInactivoElLoginYaNoRedirigeAlModuloAdministrativo() throws Exception {
+        rolService.cambiarEstado(coordinador.getIdRol(), false, admin);
+
+        login(operador).andExpect(redirectedUrl("/dashboard"));
+    }
+
+    @Test
+    void unaSesionYaIniciadaNoVuelveAlFormularioDeLogin() throws Exception {
+        mvc.perform(get("/login").session(sesion(operador))).andExpect(redirectedUrl("/usuarios"));
+        mvc.perform(get("/").session(sesion(clinico))).andExpect(redirectedUrl("/dashboard"));
+    }
+
+    @Test
+    void lasCredencialesIncorrectasNoRedirigenNiCreanSesion() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(post("/login").with(csrf()).session(session)
+                        .param("identificador", operador.getUsuario()).param("contrasena", "claveErronea"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("login"))
+                .andExpect(model().attributeExists("error"));
+        assertThat(session.getAttribute("usuarioLogueado")).isNull();
+    }
+
+    private ResultActions login(Usuario usuario) throws Exception {
+        return mvc.perform(post("/login").with(csrf())
+                .param("identificador", usuario.getUsuario()).param("contrasena", "claveValida"));
     }
 
     private MockHttpSession sesion(Usuario usuario) {
