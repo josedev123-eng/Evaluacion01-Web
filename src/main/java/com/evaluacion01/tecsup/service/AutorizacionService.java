@@ -118,7 +118,9 @@ public class AutorizacionService {
         if (esPermisoReservado(modulo, nombrePermiso)) {
             return false;
         }
+        // Un rol inactivo sigue asignado al usuario, pero no aporta ninguno de sus permisos.
         return actual.getRolesAsignados().stream()
+                .filter(Rol::isActivo)
                 .flatMap(rol -> rol.getPermisos().stream())
                 .anyMatch(p -> modulo.equalsIgnoreCase(p.getModulo())
                         && nombrePermiso.equalsIgnoreCase(p.getNombre()));

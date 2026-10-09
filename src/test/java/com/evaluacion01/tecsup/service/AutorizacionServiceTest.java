@@ -102,6 +102,22 @@ class AutorizacionServiceTest {
         assertThat(autorizacionService.tienePermiso(usuario, "usuarios", "EDITAR")).isTrue();
     }
 
+    @Test
+    void unRolInactivoNoOtorgaSusPermisosPeroLosDemasRolesSi() {
+        Rol principal = rol(1, "Coordinador", permiso("usuarios", "VER"), permiso("usuarios", "EDITAR"));
+        Rol adicional = rol(2, "Auditor", permiso("roles", "VER"));
+        principal.setEstado(false);
+        Usuario usuario = usuario(principal, adicional);
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+        assertThat(autorizacionService.tienePermiso(usuario, "usuarios", "VER")).isFalse();
+        assertThat(autorizacionService.tienePermiso(usuario, "usuarios", "EDITAR")).isFalse();
+        assertThat(autorizacionService.tienePermiso(usuario, "roles", "VER")).isTrue();
+
+        principal.setEstado(true);
+        assertThat(autorizacionService.tienePermiso(usuario, "usuarios", "EDITAR")).isTrue();
+    }
+
     private Usuario usuario(Rol principal, Rol... adicionales) {
         Usuario usuario = new Usuario();
         usuario.setIdUsuario(1L);
