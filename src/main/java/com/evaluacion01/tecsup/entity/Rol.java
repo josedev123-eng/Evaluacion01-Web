@@ -40,6 +40,11 @@ public class Rol {
     @Column(name = "area", nullable = false, length = 100)
     private String area;
 
+    // Un rol inactivo se conserva en el catálogo y en los usuarios que ya lo tienen,
+    // pero no otorga permisos ni se puede asignar de nuevo.
+    @Column(name = "estado", nullable = false)
+    private Boolean estado = true;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "rol_permisos",
@@ -47,4 +52,8 @@ public class Rol {
             inverseJoinColumns = @JoinColumn(name = "id_permiso")
     )
     private Set<Permiso> permisos = new HashSet<>();
+
+    public boolean isActivo() {
+        return !Boolean.FALSE.equals(estado);
+    }
 }

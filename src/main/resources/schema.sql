@@ -2,8 +2,25 @@ CREATE TABLE IF NOT EXISTS roles (
     id_rol INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL UNIQUE,
     descripcion VARCHAR(255),
-    area VARCHAR(100) NOT NULL
+    area VARCHAR(100) NOT NULL,
+    estado BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+-- Bases creadas antes del estado de roles: agrega roles.estado solo si falta.
+-- Se usa una sentencia preparada porque ADD COLUMN IF NOT EXISTS no existe en MySQL.
+SET @falta_estado_rol = (SELECT COUNT(*) = 0 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'roles' AND COLUMN_NAME = 'estado');
+SET @sql_estado_rol = IF(@falta_estado_rol,
+    'ALTER TABLE roles ADD COLUMN estado BOOLEAN NOT NULL DEFAULT TRUE', 'SELECT 1');
+PREPARE stmt_estado_rol FROM @sql_estado_rol;
+EXECUTE stmt_estado_rol;
+DEALLOCATE PREPARE stmt_estado_rol;
+
+-- Roles base del sistema: deben existir siempre, aunque no se importe la semilla.
+INSERT IGNORE INTO roles (nombre, descripcion, area) VALUES
+    ('Administrador', 'Gestión total del sistema, usuarios, roles y permisos', 'Administración'),
+    ('Médico', 'Historias clínicas, consultas y diagnósticos', 'Medicina'),
+    ('Recepcionista', 'Atención y registro de pacientes', 'Recepción');
 
 CREATE TABLE IF NOT EXISTS permisos (
     id_permiso INT AUTO_INCREMENT PRIMARY KEY,
