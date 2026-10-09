@@ -38,3 +38,20 @@ CREATE TABLE IF NOT EXISTS usuarios (
     reset_token_expiry DATETIME,
     CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol) REFERENCES roles (id_rol)
 );
+
+-- RF-AUD-01: bitácora de operaciones críticas (autenticación, usuarios, roles y permisos)
+CREATE TABLE IF NOT EXISTS auditoria_logs (
+    id_auditoria BIGINT AUTO_INCREMENT PRIMARY KEY,
+    fecha_hora DATETIME NOT NULL,
+    usuario_ejecutor VARCHAR(50),
+    modulo VARCHAR(50) NOT NULL,
+    accion VARCHAR(50) NOT NULL,
+    entidad VARCHAR(50),
+    id_entidad BIGINT,
+    detalle VARCHAR(1000),
+    ip VARCHAR(45),
+    resultado VARCHAR(10) NOT NULL,
+    INDEX idx_auditoria_fecha (fecha_hora),
+    INDEX idx_auditoria_usuario (usuario_ejecutor),
+    INDEX idx_auditoria_modulo (modulo)
+);
