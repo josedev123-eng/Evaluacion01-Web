@@ -1,7 +1,9 @@
 package com.evaluacion01.tecsup.service;
 
+import com.evaluacion01.tecsup.audit.ModuloAuditoria;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.stereotype.Service;
@@ -9,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.evaluacion01.tecsup.entity.Permiso;
 import com.evaluacion01.tecsup.entity.Rol;
+import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.repository.PermisoRepository;
 import com.evaluacion01.tecsup.repository.RolRepository;
 
@@ -20,6 +23,8 @@ public class RolService {
 
     private final RolRepository rolRepository;
     private final PermisoRepository permisoRepository;
+    private final AutorizacionService autorizacionService;
+    private final AuditoriaService auditoriaService;
 
     public List<Rol> listar() {
         return rolRepository.findAll();
@@ -42,42 +47,75 @@ public class RolService {
     }
 
     @Transactional
-    public Rol guardar(Rol rol) {
-        if (rol.getNombre() == null || rol.getNombre().isBlank()) {
-            throw new IllegalArgumentException("El nombre del rol es obligatorio");
-        }
-        rol.setNombre(rol.getNombre().trim());
-        if (rol.getArea() == null || rol.getArea().isBlank()) {
-            throw new IllegalArgumentException("El área del rol es obligatoria");
-        }
-        rol.setArea(rol.getArea().trim());
-
-        rolRepository.findByNombreIgnoreCase(rol.getNombre()).ifPresent(existente -> {
-            if (!existente.getIdRol().equals(rol.getIdRol())) {
-                throw new IllegalArgumentException("Ya existe un rol con el nombre '" + rol.getNombre() + "'");
+    public Rol guardar(Rol rol, Usuario operador) {
+        String accion = rol.getIdRol() == null ? "CREAR_ROL" : "EDITAR_ROL";
+        try {
+            autorizacionService.exigirAdministrador(operador);
+            if (rol.getNombre() == null || rol.getNombre().isBlank()) {
+                throw new IllegalArgumentException("El nombre del rol es obligatorio");
             }
-        });
+            rol.setNombre(rol.getNombre().trim());
+            if (rol.getArea() == null || rol.getArea().isBlank()) {
+                throw new IllegalArgumentException("El área del rol es obligatoria");
+            }
+            rol.setArea(rol.getArea().trim());
+            rolRepository.findByNombreIgnoreCase(rol.getNombre()).ifPresent(existente -> {
+                if (!existente.getIdRol().equals(rol.getIdRol())) {
+                    throw new IllegalArgumentException("Ya existe un rol con el nombre '" + rol.getNombre() + "'");
+                }
+            });
 
-        if (rol.getIdRol() != null) {
-            Rol actual = obtenerPorId(rol.getIdRol());
-            actual.setNombre(rol.getNombre());
-            actual.setDescripcion(rol.getDescripcion());
-            actual.setArea(rol.getArea());
-            return rolRepository.save(actual);
+            Rol destino;
+            String detalle;
+            if (rol.getIdRol() != null) {
+                destino = obtenerPorId(rol.getIdRol());
+                if (autorizacionService.esRolAdministrador(destino) && !autorizacionService.esRolAdministrador(rol)) {
+                    throw new IllegalArgumentException("El rol Administrador es reservado y no se puede renombrar.");
+                }
+                List<String> campos = new java.util.ArrayList<>();
+                if (!Objects.equals(destino.getNombre(), rol.getNombre())) campos.add("nombre");
+                if (!Objects.equals(destino.getDescripcion(), rol.getDescripcion())) campos.add("descripcion");
+                if (!Objects.equals(destino.getArea(), rol.getArea())) campos.add("area");
+                detalle = "Campos modificados: " + campos;
+            } else {
+                destino = new Rol();
+                detalle = "Rol creado sin permisos iniciales";
+            }
+            destino.setNombre(rol.getNombre());
+            destino.setDescripcion(rol.getDescripcion());
+            destino.setArea(rol.getArea());
+            Rol guardado = rolRepository.saveAndFlush(destino);
+            auditoriaService.registrarExito(operador, ModuloAuditoria.ROLES, accion, "Rol", guardado.getIdRol(), detalle);
+            return guardado;
+        } catch (RuntimeException e) {
+            auditoriaService.registrarFalloOperacion(operador, ModuloAuditoria.ROLES, accion, "Rol", rol.getIdRol(), e);
+            throw e;
         }
-
-        return rolRepository.save(rol);
     }
 
     @Transactional
-    public Rol asignarPermisos(Integer idRol, List<Integer> idsPermisos) {
-        Rol rol = obtenerPorId(idRol);
-
-        Set<Permiso> permisos = (idsPermisos == null || idsPermisos.isEmpty())
-                ? new HashSet<>()
-                : new HashSet<>(permisoRepository.findAllById(idsPermisos));
-
-        rol.setPermisos(permisos);
-        return rolRepository.save(rol);
+    public Rol asignarPermisos(Integer idRol, List<Integer> idsPermisos, Usuario operador) {
+        try {
+            autorizacionService.exigirAdministrador(operador);
+            Rol rol = obtenerPorId(idRol);
+            if (idsPermisos != null && idsPermisos.stream().anyMatch(Objects::isNull)) {
+                throw new IllegalArgumentException("Uno o más permisos seleccionados no existen.");
+            }
+            Set<Permiso> permisos = (idsPermisos == null || idsPermisos.isEmpty())
+                    ? new HashSet<>() : new HashSet<>(permisoRepository.findAllById(idsPermisos));
+            if (idsPermisos != null && permisos.size() != new HashSet<>(idsPermisos).size()) {
+                throw new IllegalArgumentException("Uno o más permisos seleccionados no existen.");
+            }
+            List<Integer> anteriores = rol.getPermisos().stream().map(Permiso::getIdPermiso).sorted().toList();
+            List<Integer> nuevos = permisos.stream().map(Permiso::getIdPermiso).sorted().toList();
+            rol.setPermisos(permisos);
+            Rol guardado = rolRepository.saveAndFlush(rol);
+            auditoriaService.registrarExito(operador, ModuloAuditoria.PERMISOS, "ASIGNAR_PERMISOS", "Rol", idRol,
+                    "Permisos: " + anteriores + " -> " + nuevos);
+            return guardado;
+        } catch (RuntimeException e) {
+            auditoriaService.registrarFalloOperacion(operador, ModuloAuditoria.PERMISOS, "ASIGNAR_PERMISOS", "Rol", idRol, e);
+            throw e;
+        }
     }
 }

@@ -1,7 +1,9 @@
 package com.evaluacion01.tecsup.controller;
 
+import com.evaluacion01.tecsup.audit.ModuloAuditoria;
 import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.service.AuthService;
+import com.evaluacion01.tecsup.service.AuditoriaService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -16,6 +18,9 @@ public class LoginController {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private AuditoriaService auditoriaService;
 
     @GetMapping({"/", "/login"})
     public String showLoginForm(HttpSession session) {
@@ -53,6 +58,11 @@ public class LoginController {
 
     @GetMapping("/logout")
     public String logout(HttpSession session, RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogueado");
+        if (usuario != null) {
+            auditoriaService.registrarExito(usuario, ModuloAuditoria.AUTENTICACION, "LOGOUT", "Usuario",
+                    usuario.getIdUsuario(), "Cierre de sesión");
+        }
         session.invalidate();
         redirectAttributes.addFlashAttribute("mensajeLogout", "Sesión cerrada correctamente.");
         return "redirect:/login";

@@ -5,8 +5,9 @@ import java.util.List;
 
 public interface UsuarioService {
     List<Usuario> listarTodos();
+    List<Usuario> buscar(String texto, String area, Integer idRol, Boolean estado);
     Usuario obtenerPorId(Long id);
-    Usuario registrarUsuario(Usuario usuario);
-    Usuario actualizarUsuario(Long id, Usuario usuario);
-    Usuario cambiarEstado(Long id);
+    Usuario registrarUsuario(Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador);
+    Usuario actualizarUsuario(Long id, Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador);
+    Usuario cambiarEstado(Long id, boolean activo, Usuario usuarioLogueado);
 }

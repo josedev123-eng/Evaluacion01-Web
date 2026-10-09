@@ -21,5 +21,6 @@ public class NavegacionModelAdvice {
         Usuario usuario = (Usuario) session.getAttribute("usuarioLogueado");
         model.addAttribute("puedeVerUsuarios", autorizacionService.tienePermiso(usuario, "usuarios", "VER"));
         model.addAttribute("puedeVerRoles", autorizacionService.tienePermiso(usuario, "roles", "VER"));
+        model.addAttribute("puedeVerAuditoria", autorizacionService.esAdministrador(usuario));
     }
 }
