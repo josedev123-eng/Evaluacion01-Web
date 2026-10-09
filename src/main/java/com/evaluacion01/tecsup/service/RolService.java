@@ -30,6 +30,13 @@ public class RolService {
                 .orElseThrow(() -> new IllegalArgumentException("Rol no encontrado: " + idRol));
     }
 
+    public boolean perteneceAArea(Integer idRol, String area) {
+        if (area == null || area.isBlank()) {
+            return false;
+        }
+        return obtenerPorId(idRol).getArea().equalsIgnoreCase(area.trim());
+    }
+
     public List<Permiso> listarPermisos() {
         return permisoRepository.findAll();
     }
@@ -40,6 +47,10 @@ public class RolService {
             throw new IllegalArgumentException("El nombre del rol es obligatorio");
         }
         rol.setNombre(rol.getNombre().trim());
+        if (rol.getArea() == null || rol.getArea().isBlank()) {
+            throw new IllegalArgumentException("El área del rol es obligatoria");
+        }
+        rol.setArea(rol.getArea().trim());
 
         rolRepository.findByNombreIgnoreCase(rol.getNombre()).ifPresent(existente -> {
             if (!existente.getIdRol().equals(rol.getIdRol())) {
@@ -51,6 +62,7 @@ public class RolService {
             Rol actual = obtenerPorId(rol.getIdRol());
             actual.setNombre(rol.getNombre());
             actual.setDescripcion(rol.getDescripcion());
+            actual.setArea(rol.getArea());
             return rolRepository.save(actual);
         }
 

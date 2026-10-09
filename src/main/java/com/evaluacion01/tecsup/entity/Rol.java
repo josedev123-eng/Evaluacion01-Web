@@ -37,6 +37,9 @@ public class Rol {
     @Column(name = "descripcion", length = 255)
     private String descripcion;
 
+    @Column(name = "area", nullable = false, length = 100)
+    private String area;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "rol_permisos",
