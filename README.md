@@ -88,6 +88,32 @@ existente (incluyendo cambiar su contraseña o su rol) sin crear uno nuevo.
 - [`UsuarioServiceImpl.actualizarUsuario()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java) — actualiza los datos enviados y conserva la contraseña si se deja vacía en edición.
 - **Activar/desactivar usuario** — botón por cada fila de la tabla en `formulario.html` que llama a `POST /usuarios/{id}/estado` ([`UsuarioController.cambiarEstado()`](src/main/java/com/evaluacion01/tecsup/controller/UsuarioController.java)), el cual invierte el campo `estado` ([`UsuarioServiceImpl.cambiarEstado()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java)). Sirve, por ejemplo, para cuando alguien deja de trabajar en el hospital: se le desactiva en vez de borrarlo, y `AuthService` ya bloqueaba el login de cuentas inactivas — pero antes no existía ninguna forma de marcarlas así desde la interfaz.
 
+### RF-USR-03 — Corrección de la activación/desactivación de usuarios
+**Responsable:** Jose Rojas Condor
+**Para qué sirve:** que desactivar a un usuario funcione de verdad y no se pueda deshacer por accidente.
+**Qué se corrigió:**
+- Editar a un usuario inactivo lo volvía a activar, porque el formulario no envía `estado` y la entidad lo inicia en `true`. Ahora [`UsuarioServiceImpl.actualizarUsuario()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java) no toca el estado.
+- El botón alternaba el estado (un doble clic lo revertía). Ahora `POST /usuarios/{id}/estado` recibe `activo=true|false` y pide confirmación en [`formulario.html`](src/main/resources/templates/formulario.html).
+- Un usuario desactivado seguía navegando con su sesión abierta. [`SesionActivaInterceptor`](src/main/java/com/evaluacion01/tecsup/config/SesionActivaInterceptor.java) recarga al usuario en cada petición y, si ya no está activo, cierra su sesión y lo manda a `/login?cuentaInactiva`.
+- No se puede desactivar la propia cuenta ni al último administrador activo ([`UsuarioServiceImpl.cambiarEstado()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java)).
+
+### RF-USR-04 — Asignar múltiples roles a un usuario
+**Responsable:** Jose Rojas Condor
+**Para qué sirve:** un mismo usuario puede tener varios roles de su área (por ejemplo, Médico general y Médico especialista).
+**Dónde está:**
+- [`Usuario.roles`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) (tabla `usuario_roles` en [`schema.sql`](src/main/resources/schema.sql)). `usuarios.id_rol` se mantiene como **rol principal** y siempre está incluido en `roles`. `getRolesAsignados()` devuelve el principal primero y luego los demás.
+- El formulario tiene casillas "Roles adicionales" filtradas por el área elegida; la tabla muestra todos los roles (el principal resaltado).
+- Los usuarios existentes se migran solos: `schema.sql` copia su `id_rol` a `usuario_roles`.
+- `AutorizacionService` sigue evaluando permisos con el rol principal; usar todos los roles es parte de RF-ROL-03.
+
+### RF-USR-05 — Búsqueda y filtros de usuarios
+**Responsable:** Jose Rojas Condor
+**Para qué sirve:** encontrar rápido a un usuario cuando la lista crece.
+**Dónde está:**
+- `GET /usuarios?q=&area=&idRol=&estado=activos|inactivos` en [`UsuarioController.listar()`](src/main/java/com/evaluacion01/tecsup/controller/UsuarioController.java).
+- [`UsuarioRepository.buscar()`](src/main/java/com/evaluacion01/tecsup/repository/UsuarioRepository.java): el texto busca en nombres, apellidos, nombre completo, DNI, correo y usuario; el rol coincide si es el principal o uno adicional.
+- Barra de filtros encima de la tabla en [`formulario.html`](src/main/resources/templates/formulario.html), con botón para limpiarlos.
+
 ### RF-ROL-01 — El administrador registra y modifica roles
 **Responsable:** Sovero Campoverde Karim Alexander
 **Para qué sirve:** permite crear los roles del sistema (por ejemplo "Administrador",

@@ -14,6 +14,11 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Controller
 @RequestMapping("/usuarios")
 public class UsuarioController {
@@ -31,9 +36,14 @@ public class UsuarioController {
         this.autorizacionService = autorizacionService;
     }
 
-    // Listar usuarios y preparar el objeto para el formulario
+    // Listar usuarios y preparar el objeto para el formulario.
+    // RF-USR-05: acepta filtros opcionales por texto, área, rol y estado.
     @GetMapping
-    public String listar(Model model, HttpSession session) {
+    public String listar(@RequestParam(required = false) String q,
+                         @RequestParam(required = false) String area,
+                         @RequestParam(required = false) Integer idRol,
+                         @RequestParam(required = false) String estado,
+                         Model model, HttpSession session) {
         Usuario usuarioLogueado = (Usuario) session.getAttribute("usuarioLogueado");
         if (usuarioLogueado == null) {
             return "redirect:/login";
@@ -43,17 +53,14 @@ public class UsuarioController {
         }
         Usuario nuevoUsuario = new Usuario();
         nuevoUsuario.setRol(new Rol());
-        model.addAttribute("listaUsuarios", usuarioService.listarTodos());
-        model.addAttribute("usuarioForm", nuevoUsuario);
-        model.addAttribute("roles", rolService.listar());
-        model.addAttribute("puedeCrear", autorizacionService.tienePermiso(usuarioLogueado, MODULO, "CREAR"));
-        model.addAttribute("puedeEditar", autorizacionService.tienePermiso(usuarioLogueado, MODULO, "EDITAR"));
+        prepararVista(model, usuarioLogueado, nuevoUsuario, q, area, idRol, estado);
         return "formulario";
     }
 
     // Cargar formulario con datos de un usuario para editar
     @GetMapping("/editar/{id}")
-    public String mostrarFormularioEditar(@PathVariable Long id, Model model, HttpSession session) {
+    public String mostrarFormularioEditar(@PathVariable Long id, Model model, HttpSession session,
+                                          RedirectAttributes redirectAttributes) {
         Usuario usuarioLogueado = (Usuario) session.getAttribute("usuarioLogueado");
         if (usuarioLogueado == null) {
             return "redirect:/login";
@@ -61,11 +68,14 @@ public class UsuarioController {
         if (!autorizacionService.tienePermiso(usuarioLogueado, MODULO, "EDITAR")) {
             return "redirect:/usuarios";
         }
-        model.addAttribute("listaUsuarios", usuarioService.listarTodos());
-        model.addAttribute("usuarioForm", usuarioService.obtenerPorId(id));
-        model.addAttribute("roles", rolService.listar());
-        model.addAttribute("puedeCrear", autorizacionService.tienePermiso(usuarioLogueado, MODULO, "CREAR"));
-        model.addAttribute("puedeEditar", true);
+        Usuario usuario;
+        try {
+            usuario = usuarioService.obtenerPorId(id);
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/usuarios";
+        }
+        prepararVista(model, usuarioLogueado, usuario, null, null, null, null);
         return "formulario";
     }
 
@@ -75,6 +85,7 @@ public class UsuarioController {
     // convertir ese valor de texto al objeto Usuario completo y revienta con un 400.
     @PostMapping("/guardar")
     public String guardar(@ModelAttribute("usuarioForm") Usuario usuario, BindingResult bindingResult,
+                           @RequestParam(name = "idsRoles", required = false) List<Integer> idsRoles,
                            HttpSession session, RedirectAttributes redirectAttributes) {
         Usuario usuarioLogueado = (Usuario) session.getAttribute("usuarioLogueado");
         if (usuarioLogueado == null) {
@@ -97,19 +108,26 @@ public class UsuarioController {
         }
         try {
             if (!esNuevo) {
-                usuarioService.actualizarUsuario(usuario.getIdUsuario(), usuario);
+                usuarioService.actualizarUsuario(usuario.getIdUsuario(), usuario, idsRoles);
+                redirectAttributes.addFlashAttribute("exito", "Usuario actualizado correctamente");
             } else {
-                usuarioService.registrarUsuario(usuario);
+                usuarioService.registrarUsuario(usuario, idsRoles);
+                redirectAttributes.addFlashAttribute("exito", "Usuario registrado correctamente");
             }
         } catch (DataIntegrityViolationException e) {
             redirectAttributes.addFlashAttribute("error", mensajeDuplicado(e));
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/usuarios";
     }
 
-    // Activar/desactivar usuario (ej. cuando alguien deja de trabajar en el hospital)
+    // RF-USR-03: activar/desactivar usuario (ej. cuando alguien deja de trabajar en el hospital).
+    // Recibe el estado deseado en vez de alternarlo, y rechaza desactivar la propia cuenta
+    // o al último administrador activo.
     @PostMapping("/{id}/estado")
-    public String cambiarEstado(@PathVariable Long id, HttpSession session, RedirectAttributes redirectAttributes) {
+    public String cambiarEstado(@PathVariable Long id, @RequestParam("activo") boolean activo,
+                                HttpSession session, RedirectAttributes redirectAttributes) {
         Usuario usuarioLogueado = (Usuario) session.getAttribute("usuarioLogueado");
         if (usuarioLogueado == null) {
             return "redirect:/login";
@@ -118,10 +136,38 @@ public class UsuarioController {
             redirectAttributes.addFlashAttribute("error", "Tu rol no tiene permiso para activar/desactivar usuarios.");
             return "redirect:/usuarios";
         }
-        Usuario usuario = usuarioService.cambiarEstado(id);
-        String estado = Boolean.TRUE.equals(usuario.getEstado()) ? "activado" : "desactivado";
-        redirectAttributes.addFlashAttribute("exito", "Usuario " + estado + " correctamente");
+        try {
+            Usuario usuario = usuarioService.cambiarEstado(id, activo, usuarioLogueado);
+            String estado = Boolean.TRUE.equals(usuario.getEstado()) ? "activado" : "desactivado";
+            redirectAttributes.addFlashAttribute("exito",
+                    "Usuario " + usuario.getUsuario() + " " + estado + " correctamente");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
         return "redirect:/usuarios";
+    }
+
+    private void prepararVista(Model model, Usuario usuarioLogueado, Usuario usuarioForm,
+                               String q, String area, Integer idRol, String estado) {
+        Boolean estadoFiltro = "activos".equals(estado) ? Boolean.TRUE
+                : "inactivos".equals(estado) ? Boolean.FALSE : null;
+        Set<Integer> idsRolesSeleccionados = usuarioForm.getRolesAsignados().stream()
+                .map(Rol::getIdRol)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        model.addAttribute("listaUsuarios", usuarioService.buscar(q, area, idRol, estadoFiltro));
+        model.addAttribute("usuarioForm", usuarioForm);
+        model.addAttribute("idsRolesSeleccionados", idsRolesSeleccionados);
+        model.addAttribute("roles", rolService.listar());
+        model.addAttribute("filtroQ", q);
+        model.addAttribute("filtroArea", area);
+        model.addAttribute("filtroIdRol", idRol);
+        model.addAttribute("filtroEstado", estado);
+        model.addAttribute("hayFiltros", (q != null && !q.isBlank()) || (area != null && !area.isBlank())
+                || idRol != null || estadoFiltro != null);
+        model.addAttribute("idUsuarioLogueado", usuarioLogueado.getIdUsuario());
+        model.addAttribute("puedeCrear", autorizacionService.tienePermiso(usuarioLogueado, MODULO, "CREAR"));
+        model.addAttribute("puedeEditar", autorizacionService.tienePermiso(usuarioLogueado, MODULO, "EDITAR"));
     }
 
     private String mensajeDuplicado(DataIntegrityViolationException e) {
