@@ -8,11 +8,11 @@ public class ViewController {
 
     @GetMapping("/forgot-password")
     public String forgotPasswordPage() {
-        return "forgot-password"; // Carga forgot-password.html
+        return "forgot-password";
     }
 
     @GetMapping("/reset-password")
     public String resetPasswordPage() {
-        return "reset-password"; // Carga reset-password.html
+        return "reset-password";
     }
 }

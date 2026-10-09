@@ -1,7 +1,7 @@
 package com.evaluacion01.tecsup.service;
 
-import com.evaluacion01.tecsup.entity.User;
-import com.evaluacion01.tecsup.repository.UserRepository;
+import com.evaluacion01.tecsup.entity.Usuario;
+import com.evaluacion01.tecsup.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -15,7 +15,7 @@ import java.util.UUID;
 public class PasswordRecoveryService {
 
     @Autowired
-    private UserRepository userRepository;
+    private UsuarioRepository usuarioRepository;
 
     @Autowired(required = false)
     private JavaMailSender mailSender;
@@ -24,29 +24,29 @@ public class PasswordRecoveryService {
     private PasswordEncoder passwordEncoder;
 
     public void processForgotPassword(String email) {
-        User user = userRepository.findByCorreo(email)
+        Usuario usuario = usuarioRepository.findByCorreo(email)
                 .orElseThrow(() -> new RuntimeException("No existe un usuario con el correo ingresado"));
 
         String token = UUID.randomUUID().toString();
-        user.setResetToken(token);
-        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
-        userRepository.save(user);
+        usuario.setResetToken(token);
+        usuario.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
+        usuarioRepository.save(usuario);
 
-        sendEmail(user.getCorreo(), token);
+        sendEmail(usuario.getCorreo(), token);
     }
 
     public void processResetPassword(String token, String newPassword) {
-        User user = userRepository.findByResetToken(token)
+        Usuario usuario = usuarioRepository.findByResetToken(token)
                 .orElseThrow(() -> new RuntimeException("El token de recuperación es inválido"));
 
-        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+        if (usuario.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("El token de recuperación ha expirado");
         }
 
-        user.setContrasena(passwordEncoder.encode(newPassword));
-        user.setResetToken(null);
-        user.setResetTokenExpiry(null);
-        userRepository.save(user);
+        usuario.setContrasena(passwordEncoder.encode(newPassword));
+        usuario.setResetToken(null);
+        usuario.setResetTokenExpiry(null);
+        usuarioRepository.save(usuario);
     }
 
     private void sendEmail(String toEmail, String token) {

@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
-@RestControllerAdvice
+@RestControllerAdvice(assignableTypes = {
+        com.evaluacion01.tecsup.controller.PasswordRecoveryController.class
+})
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)

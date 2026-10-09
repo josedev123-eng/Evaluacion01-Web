@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de usuarios | Sistema Hospitalario</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body class="app-shell">
+<nav class="navbar navbar-expand app-navbar" aria-label="Navegación principal">
+    <div class="container">
+        <span class="navbar-brand"><i class="bi bi-heart-pulse-fill me-2"></i>Sistema Hospitalario</span>
+        <div class="navbar-nav">
+            <a class="nav-link text-white" th:href="@{/dashboard}"><i class="bi bi-grid-1x2 me-1"></i>Inicio</a>
+            <a th:if="${puedeVerUsuarios}" class="nav-link text-white is-current" th:href="@{/usuarios}"><i class="bi bi-people me-1"></i>Usuarios</a>
+            <a th:if="${puedeVerRoles}" class="nav-link text-white" th:href="@{/roles}"><i class="bi bi-shield-check me-1"></i>Roles</a>
+            <a class="nav-link text-white logout-link" th:href="@{/logout}"><i class="bi bi-box-arrow-right me-1"></i>Salir</a>
+        </div>
+    </div>
+</nav>
+<main class="app-main container py-4 py-lg-5">
+
+<div class="page-hero">
+    <div class="page-hero-copy">
+        <p class="auth-kicker mb-1">Administración</p>
+        <h1 class="page-heading" th:text="${usuarioForm.idUsuario == null} ? 'Registrar usuario' : 'Editar usuario'"></h1>
+        <p class="page-subtitle">Gestiona la información y el acceso del personal.</p>
+    </div>
+    <div class="page-hero-icon"><i class="bi bi-person-vcard"></i></div>
+</div>
+
+<div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+<div th:if="${exito}" class="alert alert-success" th:text="${exito}"></div>
+
+<form th:if="${(usuarioForm.idUsuario == null and puedeCrear) or (usuarioForm.idUsuario != null and puedeEditar)}"
+      id="formUsuario" th:action="@{/usuarios/guardar}" th:object="${usuarioForm}" method="post" class="content-card p-4 p-lg-5 mb-5">
+    <input type="hidden" th:field="*{idUsuario}" />
+
+    <section class="form-section">
+    <div class="form-section-title"><i class="bi bi-person me-1"></i>Información personal</div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Nombres:</label>
+            <input type="text" th:field="*{nombres}" class="form-control" required />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Apellidos:</label>
+            <input type="text" th:field="*{apellidos}" class="form-control" required />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label class="form-label">DNI:</label>
+            <input type="text" th:field="*{dni}" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Correo:</label>
+            <input type="email" th:field="*{correo}" class="form-control" required />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Teléfono:</label>
+            <input type="text" th:field="*{telefono}" class="form-control" />
+        </div>
+    </div>
+    </section>
+
+    <section class="form-section">
+    <div class="form-section-title"><i class="bi bi-key me-1"></i>Acceso al sistema</div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Usuario:</label>
+            <input type="text" th:field="*{usuario}" class="form-control" required />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Contraseña:</label>
+            <input type="password" name="contrasena" class="form-control"
+                   th:placeholder="${usuarioForm.idUsuario == null} ? 'Contraseña' : 'Dejar en blanco para no cambiar'"
+                   th:required="${usuarioForm.idUsuario == null}" />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Área:</label>
+            <select th:field="*{area}" class="form-select" required>
+                <option value="">-- Seleccione un área --</option>
+                <option value="Administración">Administración</option>
+                <option value="Medicina">Medicina</option>
+                <option value="Enfermería">Enfermería</option>
+                <option value="Recepción">Recepción</option>
+                <option value="Laboratorio">Laboratorio</option>
+                <option value="Farmacia">Farmacia</option>
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Rol principal:</label>
+            <select th:field="*{rol.idRol}" class="form-select" required>
+                <option value="">-- Seleccione un Rol --</option>
+                <option th:each="r : ${rolesAsignables}" th:value="${r.idRol}" th:text="${r.nombre}"
+                        th:attr="data-area=${r.area}"></option>
+            </select>
+            <div class="form-text">Primero selecciona un área para ver sus roles disponibles.</div>
+        </div>
+    </div>
+
+    <!-- RF-USR-04: roles adicionales del usuario (además del principal) -->
+    <div class="mb-3">
+        <label class="form-label">Roles adicionales:</label>
+        <div class="roles-adicionales border rounded p-3">
+            <div th:each="r : ${rolesAsignables}" class="form-check form-check-inline rol-adicional" th:attr="data-area=${r.area}">
+                <input class="form-check-input" type="checkbox" name="idsRoles"
+                       th:id="'rolAdicional' + ${r.idRol}" th:value="${r.idRol}"
+                       th:checked="${idsRolesSeleccionados.contains(r.idRol)}">
+                <label class="form-check-label" th:for="'rolAdicional' + ${r.idRol}" th:text="${r.nombre}"></label>
+            </div>
+            <span class="small text-muted sin-roles-adicionales">No hay otros roles en esta área.</span>
+        </div>
+        <div class="form-text">Opcional. Los permisos de todos los roles de la misma área se combinan.</div>
+        <div th:unless="${esAdministrador}" class="form-text">No puedes asignar Administrador, cambiar tus propios roles ni conceder permisos superiores a los tuyos.</div>
+    </div>
+    </section>
+
+    <div class="d-flex flex-wrap gap-2 pt-2">
+        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-lg me-1"></i>Guardar usuario</button>
+        <a th:if="${usuarioForm.idUsuario != null}" th:href="@{/usuarios}" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+</form>
+
+<section class="content-card overflow-hidden">
+    <div class="card-header d-flex justify-content-between align-items-center p-4">
+        <div>
+            <h2 class="h5 fw-bold mb-1">Usuarios registrados</h2>
+            <p class="small text-secondary mb-0">Consulta y administra las cuentas del sistema.</p>
+        </div>
+        <span class="count-badge" th:text="${#lists.size(listaUsuarios)} + (${hayFiltros} ? ' encontrados' : ' registrados')"></span>
+    </div>
+
+    <!-- RF-USR-05: búsqueda y filtros -->
+    <form th:action="@{/usuarios}" method="get" class="row g-2 align-items-end px-4 pb-3">
+        <div class="col-md-4">
+            <label class="form-label small mb-1" for="filtroQ">Buscar</label>
+            <input type="search" id="filtroQ" name="q" th:value="${filtroQ}" class="form-control"
+                   placeholder="Nombre, DNI, correo o usuario">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small mb-1" for="filtroArea">Área</label>
+            <select id="filtroArea" name="area" class="form-select">
+                <option value="">Todas</option>
+                <option th:each="a : ${ {'Administración','Medicina','Enfermería','Recepción','Laboratorio','Farmacia'} }"
+                        th:value="${a}" th:text="${a}" th:selected="${a == filtroArea}"></option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small mb-1" for="filtroIdRol">Rol</label>
+            <select id="filtroIdRol" name="idRol" class="form-select">
+                <option value="">Todos</option>
+                <option th:each="r : ${roles}" th:value="${r.idRol}" th:text="${r.nombre}"
+                        th:selected="${r.idRol == filtroIdRol}"></option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small mb-1" for="filtroEstado">Estado</label>
+            <select id="filtroEstado" name="estado" class="form-select">
+                <option value="">Todos</option>
+                <option value="activos" th:selected="${filtroEstado == 'activos'}">Activos</option>
+                <option value="inactivos" th:selected="${filtroEstado == 'inactivos'}">Inactivos</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search me-1"></i>Filtrar</button>
+            <a th:if="${hayFiltros}" th:href="@{/usuarios}" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+    <div class="table-responsive">
+<table class="table data-table align-middle">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Nombres</th>
+        <th>Usuario</th>
+        <th>Correo</th>
+        <th>Roles</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="u : ${listaUsuarios}">
+        <td th:text="${u.idUsuario}"></td>
+        <td class="table-primary-text" th:text="${u.nombres + ' ' + u.apellidos}"></td>
+        <td class="table-muted-text" th:text="${u.usuario}"></td>
+        <td class="table-muted-text" th:text="${u.correo}"></td>
+        <td>
+            <span th:each="r, it : ${u.rolesAsignados}" class="badge me-1"
+                  th:classappend="${it.first} ? 'bg-primary' : 'bg-light text-dark border'"
+                  th:title="${it.first} ? 'Rol principal' : 'Rol adicional'" th:text="${r.nombre}"></span>
+        </td>
+        <td>
+            <span th:if="${u.estado}" class="badge bg-success">Activo</span>
+            <span th:unless="${u.estado}" class="badge bg-secondary">Inactivo</span>
+        </td>
+        <td>
+            <span th:unless="${puedeEditar}" class="text-muted small">Sin permiso</span>
+            <span th:if="${puedeEditar and idsUsuariosProtegidos.contains(u.idUsuario)}" class="badge bg-secondary">Cuenta protegida</span>
+            <a th:if="${puedeEditar and !idsUsuariosProtegidos.contains(u.idUsuario)}" th:href="@{/usuarios/editar/{id}(id=${u.idUsuario})}" class="btn btn-sm btn-warning">Editar</a>
+            <form th:if="${puedeEditar and !idsUsuariosProtegidos.contains(u.idUsuario) and u.idUsuario != idUsuarioLogueado}"
+                  th:action="@{/usuarios/{id}/estado(id=${u.idUsuario})}" method="post" class="d-inline form-estado"
+                  th:attr="data-confirmar=${u.estado} ? ('¿Desactivar a ' + ${u.usuario} + '? No podrá iniciar sesión y se cerrará su sesión actual.') : ('¿Activar a ' + ${u.usuario} + '?')">
+                <input type="hidden" name="activo" th:value="${!u.estado}">
+                <button type="submit" class="btn btn-sm" th:classappend="${u.estado} ? 'btn-outline-danger' : 'btn-outline-success'"
+                        th:text="${u.estado} ? 'Desactivar' : 'Activar'"></button>
+            </form>
+            <span th:if="${puedeEditar and u.idUsuario == idUsuarioLogueado}" class="badge bg-info-subtle text-info-emphasis">Tu cuenta</span>
+        </td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(listaUsuarios)}">
+        <td colspan="7" class="text-center text-muted" th:text="${hayFiltros} ? 'Ningún usuario coincide con los filtros' : 'No hay usuarios registrados'"></td>
+    </tr>
+    </tbody>
+</table>
+</div>
+</section>
+
+</main>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Confirmación antes de activar/desactivar (RF-USR-03)
+        document.querySelectorAll('.form-estado').forEach(function (form) {
+            form.addEventListener('submit', function (evento) {
+                if (!confirm(form.dataset.confirmar)) {
+                    evento.preventDefault();
+                }
+            });
+        });
+
+        const formulario = document.getElementById('formUsuario');
+        if (!formulario) {
+            return;
+        }
+        const area = formulario.querySelector('[name="area"]');
+        const rol = formulario.querySelector('[name="rol.idRol"]');
+        const adicionales = Array.from(formulario.querySelectorAll('.rol-adicional'));
+        const sinAdicionales = formulario.querySelector('.sin-roles-adicionales');
+
+        function filtrarRoles() {
+            const areaSeleccionada = area.value;
+            Array.from(rol.options).forEach(function (opcion) {
+                if (!opcion.value) {
+                    return;
+                }
+                const disponible = opcion.dataset.area === areaSeleccionada;
+                opcion.hidden = !disponible;
+                opcion.disabled = !disponible;
+            });
+
+            if (rol.selectedOptions[0] && rol.selectedOptions[0].disabled) {
+                rol.value = '';
+            }
+
+            // Roles adicionales: solo los del área y distintos al rol principal
+            let visibles = 0;
+            adicionales.forEach(function (contenedor) {
+                const check = contenedor.querySelector('input');
+                const disponible = contenedor.dataset.area === areaSeleccionada && check.value !== rol.value;
+                contenedor.hidden = !disponible;
+                check.disabled = !disponible;
+                if (!disponible) {
+                    check.checked = false;
+                } else {
+                    visibles++;
+                }
+            });
+            sinAdicionales.hidden = visibles > 0;
+        }
+
+        area.addEventListener('change', filtrarRoles);
+        rol.addEventListener('change', filtrarRoles);
+        filtrarRoles();
+    });
+</script>
+</body>
+</html>
