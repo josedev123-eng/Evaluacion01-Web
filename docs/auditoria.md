@@ -30,6 +30,19 @@ Las pruebas utilizan exclusivamente H2 en memoria y el perfil `test`:
 .\mvnw.cmd -B verify "-Dspring.profiles.active=test"
 ```
 
-La primera entrega verifica persistencia, rollback, conservación de intentos
-fallidos, límites de campos, fecha UTC y limpieza del contexto. La conexión de
-eventos a los servicios y la consulta administrativa se incorporan en las siguientes entregas.
+Las pruebas verifican persistencia, rollback, conservación de intentos fallidos,
+límites de campos, fecha UTC y limpieza del contexto.
+
+## Autenticación (RF-AUD-01)
+
+- `LOGIN / EXITO`: cuenta autenticada y actualización de último acceso en la misma
+  transacción. Se registra una sola vez en `AuthService`, también fuera de HTTP.
+- `LOGIN / FALLO`: datos incompletos o credenciales inválidas. Se conserva el
+  identificador intentado (máximo 100 caracteres), nunca la clave enviada.
+- `LOGIN / DENEGADO`: cuenta inactiva; no se crea una sesión autenticada.
+- `LOGOUT / EXITO`: cierre de una sesión con usuario, antes de invalidarla.
+  Un logout anónimo no genera un cierre ficticio de usuario.
+
+Los motivos son códigos definidos por la aplicación, no mensajes de excepciones
+que puedan contener SQL, datos personales o secretos. La conexión a cambios de
+usuarios, roles y permisos y la consulta administrativa continúan en las siguientes entregas.
