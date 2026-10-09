@@ -254,13 +254,13 @@ piezas funcionaran juntas:
 | Área | Roles iniciales |
 | --- | --- |
 | Administración | Administrador, Coordinador administrativo, Auditor administrativo |
-| Medicina | Médico general, Médico especialista |
+| Medicina | Médico, Médico general, Médico especialista |
 | Enfermería | Enfermero, Técnico de enfermería |
 | Recepción | Recepcionista, Auxiliar de recepción |
 | Laboratorio | Analista de laboratorio, Técnico de laboratorio |
 | Farmacia | Farmacéutico, Auxiliar de farmacia |
 
-La semilla contiene **13 roles, 5 permisos y 1 cuenta inicial**. La cuenta de
+La semilla contiene **14 roles, 5 permisos y 1 cuenta inicial**. La cuenta de
 demostración es `admin` con contraseña `admin123`. Importar la semilla no borra ni
 reinicia una base existente; el reinicio realizado durante el desarrollo fue una
 operación manual exclusiva de la base local.
@@ -407,7 +407,7 @@ SELECT COUNT(*) AS total_permisos FROM permisos;
 SELECT usuario, area FROM usuarios;
 ```
 
-En una instalación nueva deben existir 13 roles, 5 permisos y el usuario `admin`
+En una instalación nueva deben existir 14 roles, 5 permisos y el usuario `admin`
 en Administración. Con SQLyog o Workbench, ejecuta el contenido de los dos archivos
 en ese mismo orden dentro de `bd_hospital`; `SOURCE` es un comando del cliente
 `mysql`, no SQL estándar.
@@ -471,6 +471,10 @@ migración. El procedimiento de actualización se mejorará en futuras entregas.
 
 Las entregas de Retamozo para RF-AUD-01 y RF-AUD-02 se documentan en
 [docs/auditoria.md](docs/auditoria.md), con sus políticas de persistencia y pruebas.
+
+El backend de roles y seguridad de Sovero (relación Rol–Permiso, estado de roles,
+matriz de accesos por rol, redirección del login y verificación con MySQL) se documenta
+en [docs/roles-seguridad.md](docs/roles-seguridad.md).
 
 En la revisión del 30 de septiembre de 2026 se ejecutó:
 
