@@ -69,7 +69,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         try {
             validarDatos(usuario, null);
             Rol principal = obtenerRolPrincipal(usuario);
-            Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuario.getArea());
+            Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuario.getArea(), List.of());
             autorizacionService.validarAsignacionRoles(operador, null, roles);
             if (usuario.getContrasena() == null || usuario.getContrasena().isBlank()) {
                 throw new IllegalArgumentException("La contraseña es obligatoria para registrar un usuario.");
@@ -105,7 +105,8 @@ public class UsuarioServiceImpl implements UsuarioService {
                 validarContrasena(usuarioActualizado.getContrasena());
             }
             Rol principal = obtenerRolPrincipal(usuarioActualizado);
-            Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuarioActualizado.getArea());
+            Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuarioActualizado.getArea(),
+                    idsRoles(usuarioExistente.getRolesAsignados()));
             autorizacionService.validarAsignacionRoles(operador, usuarioExistente, roles);
             validarConservacionAdministrador(usuarioExistente, roles);
             String detalle = detallarCambios(usuarioExistente, usuarioActualizado, principal, roles);
@@ -159,8 +160,11 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     // RF-USR-04: el rol principal siempre forma parte de los roles asignados. Todos los
     // roles deben pertenecer al área del usuario, igual que la regla del rol principal.
-    private Set<Rol> armarRoles(Rol principal, List<Integer> idsRolesAdicionales, String area) {
+    // Un rol inactivo no admite asignaciones nuevas: solo lo conserva quien ya lo tenía.
+    private Set<Rol> armarRoles(Rol principal, List<Integer> idsRolesAdicionales, String area,
+                                List<Integer> idsRolesYaAsignados) {
         validarArea(principal, area);
+        validarRolAsignable(principal, idsRolesYaAsignados);
         Set<Rol> roles = new LinkedHashSet<>();
         roles.add(principal);
         if (idsRolesAdicionales != null) {
@@ -170,6 +174,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 }
                 Rol rol = obtenerRol(idRol);
                 validarArea(rol, area);
+                validarRolAsignable(rol, idsRolesYaAsignados);
                 roles.add(rol);
             }
         }
@@ -186,6 +191,12 @@ public class UsuarioServiceImpl implements UsuarioService {
             throw new IllegalArgumentException("Debes seleccionar un rol principal.");
         }
         return obtenerRol(usuario.getRol().getIdRol());
+    }
+
+    private void validarRolAsignable(Rol rol, List<Integer> idsRolesYaAsignados) {
+        if (!rol.isActivo() && !idsRolesYaAsignados.contains(rol.getIdRol())) {
+            throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' está inactivo y no se puede asignar.");
+        }
     }
 
     private void validarArea(Rol rol, String area) {

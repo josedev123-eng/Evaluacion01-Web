@@ -16,6 +16,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
@@ -158,6 +159,64 @@ class RolGestionIntegrationTests {
                 .andExpect(flash().attributeExists("error"));
     }
 
+    // ---- Roles inactivos: sin asignaciones nuevas ----
+
+    @Test
+    void noSePuedeRegistrarUnUsuarioConUnRolInactivo() throws Exception {
+        rolService.cambiarEstado(medico.getIdRol(), false, admin);
+
+        mvc.perform(formularioUsuario(null, "ana", medico).session(sesion(admin)))
+                .andExpect(flash().attribute("error", "El rol 'Médico' está inactivo y no se puede asignar."));
+        assertThat(usuarios.findByUsuario("ana")).isEmpty();
+    }
+
+    @Test
+    void noSePuedeAgregarUnRolInactivoComoPrincipalNiComoAdicional() throws Exception {
+        Rol especialista = rol("Médico especialista", "Medicina");
+        Usuario ana = usuario("ana", medico);
+        rolService.cambiarEstado(especialista.getIdRol(), false, admin);
+
+        mvc.perform(formularioUsuario(ana, "ana", especialista).session(sesion(admin)))
+                .andExpect(flash().attributeExists("error"));
+        mvc.perform(formularioUsuario(ana, "ana", medico).session(sesion(admin))
+                        .param("idsRoles", especialista.getIdRol().toString()))
+                .andExpect(flash().attributeExists("error"));
+        assertThat(ana.getRol()).isEqualTo(medico);
+        assertThat(ana.getRoles()).containsExactly(medico);
+    }
+
+    @Test
+    void quienYaTeniaElRolInactivoLoConservaAlEditarSusDatos() throws Exception {
+        Usuario ana = usuario("ana", medico);
+        rolService.cambiarEstado(medico.getIdRol(), false, admin);
+
+        mvc.perform(formularioUsuario(ana, "ana", medico).session(sesion(admin)))
+                .andExpect(flash().attribute("exito", "Usuario actualizado correctamente"));
+        assertThat(ana.getNombres()).isEqualTo("Editado");
+        assertThat(ana.getRol()).isEqualTo(medico);
+    }
+
+    @Test
+    void elFormularioDeUsuariosNoOfreceRolesInactivos() throws Exception {
+        Rol recepcionista = rol("Recepcionista", "Recepción");
+        rolService.cambiarEstado(medico.getIdRol(), false, admin);
+
+        mvc.perform(get("/usuarios").session(sesion(admin)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("rolesAsignables",
+                        org.hamcrest.Matchers.containsInAnyOrder(administrador, recepcionista)));
+    }
+
+    @Test
+    void alReactivarElRolVuelveASerAsignable() throws Exception {
+        rolService.cambiarEstado(medico.getIdRol(), false, admin);
+        rolService.cambiarEstado(medico.getIdRol(), true, admin);
+
+        mvc.perform(formularioUsuario(null, "ana", medico).session(sesion(admin)))
+                .andExpect(flash().attribute("exito", "Usuario registrado correctamente"));
+        assertThat(usuarios.findByUsuario("ana").orElseThrow().getRol()).isEqualTo(medico);
+    }
+
     // ---- Roles base ----
 
     @Test
@@ -180,6 +239,18 @@ class RolGestionIntegrationTests {
     private Boolean estadoEnTabla(Rol rol) {
         roles.flush();
         return jdbc.queryForObject("SELECT estado FROM roles WHERE id_rol = ?", Boolean.class, rol.getIdRol());
+    }
+
+    private MockHttpServletRequestBuilder formularioUsuario(Usuario existente, String nombreUsuario, Rol principal) {
+        MockHttpServletRequestBuilder request = post("/usuarios/guardar").with(csrf())
+                .param("nombres", "Editado").param("apellidos", "Prueba")
+                .param("correo", nombreUsuario + "@pruebas.local").param("usuario", nombreUsuario)
+                .param("contrasena", existente == null ? "claveNueva" : "")
+                .param("area", principal.getArea()).param("rol.idRol", principal.getIdRol().toString());
+        if (existente != null) {
+            request.param("idUsuario", existente.getIdUsuario().toString());
+        }
+        return request;
     }
 
     private MockHttpSession sesion(Usuario usuario) {
