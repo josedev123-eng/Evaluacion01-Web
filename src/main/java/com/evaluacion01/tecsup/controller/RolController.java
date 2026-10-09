@@ -56,6 +56,7 @@ public class RolController {
         }
         model.addAttribute("roles", rolService.listar());
         model.addAttribute("puedeEditar", autorizacionService.tienePermiso(usuarioLogueado, MODULO, "EDITAR"));
+        model.addAttribute("rolesBaseFaltantes", rolService.rolesBaseFaltantes());
         return "roles/lista-roles";
     }
 
@@ -95,6 +96,25 @@ public class RolController {
             rolService.guardar(rol, (Usuario) session.getAttribute("usuarioLogueado"));
             redirectAttributes.addFlashAttribute("exito", "Rol guardado correctamente");
         } catch (IllegalArgumentException | AccessDeniedException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/roles";
+    }
+
+    // Activar/desactivar rol. Recibe el estado deseado (activo=true|false) en vez de alternarlo.
+    @PostMapping("/{id}/estado")
+    public String cambiarEstado(@PathVariable("id") Integer id, @RequestParam("activo") boolean activo,
+                                HttpSession session, RedirectAttributes redirectAttributes) {
+        if (!tienePermisoEditar(session)) {
+            registrarRechazo(session, ModuloAuditoria.ROLES, activo ? "ACTIVAR_ROL" : "DESACTIVAR_ROL", id, "SIN_PERMISO", true);
+            redirectAttributes.addFlashAttribute("error", "Tu rol no tiene permiso para activar/desactivar roles.");
+            return "redirect:/roles";
+        }
+        try {
+            Rol rol = rolService.cambiarEstado(id, activo, (Usuario) session.getAttribute("usuarioLogueado"));
+            redirectAttributes.addFlashAttribute("exito",
+                    "Rol " + rol.getNombre() + (rol.isActivo() ? " activado" : " desactivado") + " correctamente");
+        } catch (IllegalArgumentException | IllegalStateException | AccessDeniedException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/roles";

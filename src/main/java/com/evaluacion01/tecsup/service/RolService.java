@@ -21,6 +21,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RolService {
 
+    // Roles que el sistema necesita siempre; schema.sql los crea si faltan.
+    public static final List<String> ROLES_BASE = List.of("Administrador", "Médico", "Recepcionista");
+
     private final RolRepository rolRepository;
     private final PermisoRepository permisoRepository;
     private final AutorizacionService autorizacionService;
@@ -28,6 +31,17 @@ public class RolService {
 
     public List<Rol> listar() {
         return rolRepository.findAll();
+    }
+
+    public List<Rol> listarActivos() {
+        return rolRepository.findByEstadoTrue();
+    }
+
+    // Devuelve los roles base que no están en el catálogo (lista vacía si están todos).
+    public List<String> rolesBaseFaltantes() {
+        return ROLES_BASE.stream()
+                .filter(nombre -> !rolRepository.existsByNombreIgnoreCase(nombre))
+                .toList();
     }
 
     public Rol obtenerPorId(Integer idRol) {
@@ -89,6 +103,29 @@ public class RolService {
             return guardado;
         } catch (RuntimeException e) {
             auditoriaService.registrarFalloOperacion(operador, ModuloAuditoria.ROLES, accion, "Rol", rol.getIdRol(), e);
+            throw e;
+        }
+    }
+
+    // Activa o desactiva de forma explícita (no alterna), igual que el estado de usuarios.
+    // El rol Administrador nunca se desactiva: así siempre queda quien administre el sistema.
+    @Transactional
+    public Rol cambiarEstado(Integer idRol, boolean activo, Usuario operador) {
+        String accion = activo ? "ACTIVAR_ROL" : "DESACTIVAR_ROL";
+        try {
+            autorizacionService.exigirAdministrador(operador);
+            Rol rol = obtenerPorId(idRol);
+            if (!activo && autorizacionService.esRolAdministrador(rol)) {
+                throw new IllegalStateException("El rol Administrador es reservado y no se puede desactivar.");
+            }
+            boolean anterior = rol.isActivo();
+            rol.setEstado(activo);
+            Rol guardado = rolRepository.saveAndFlush(rol);
+            auditoriaService.registrarExito(operador, ModuloAuditoria.ROLES, accion, "Rol", idRol,
+                    "Estado: " + anterior + " -> " + activo);
+            return guardado;
+        } catch (RuntimeException e) {
+            auditoriaService.registrarFalloOperacion(operador, ModuloAuditoria.ROLES, accion, "Rol", idRol, e);
             throw e;
         }
     }
