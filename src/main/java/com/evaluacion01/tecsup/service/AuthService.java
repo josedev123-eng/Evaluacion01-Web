@@ -3,8 +3,10 @@ package com.evaluacion01.tecsup.service;
 import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -12,6 +14,9 @@ public class AuthService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public Usuario autenticar(String identificador, String contrasena) throws Exception {
         if (identificador == null || identificador.trim().isEmpty()) {
@@ -29,13 +34,16 @@ public class AuthService {
 
         Usuario usuario = usuarioOpt.get();
 
-        if (!usuario.getContrasena().equals(contrasena)) {
+        if (!passwordEncoder.matches(contrasena, usuario.getContrasena())) {
             throw new Exception("La contraseña es incorrecta.");
         }
 
         if (Boolean.FALSE.equals(usuario.getEstado())) {
             throw new Exception("Su cuenta se encuentra inactiva.");
         }
+
+        usuario.setUltimoAcceso(LocalDateTime.now());
+        usuarioRepository.save(usuario);
 
         return usuario;
     }
