@@ -24,7 +24,8 @@ Antes de aplicar SQL a una base real, haz un respaldo y revisa su estructura.
 
 ## Verificación
 
-Las pruebas utilizan exclusivamente H2 en memoria y el perfil `test`:
+Las pruebas utilizan exclusivamente H2 en memoria y el perfil `test`, que
+deshabilita la autoconfiguración SMTP para no enviar correos externos:
 
 ```powershell
 .\mvnw.cmd -B verify "-Dspring.profiles.active=test"
@@ -32,6 +33,9 @@ Las pruebas utilizan exclusivamente H2 en memoria y el perfil `test`:
 
 Las pruebas verifican persistencia, rollback, conservación de intentos fallidos,
 límites de campos, fecha UTC y limpieza del contexto.
+
+Verificación del 9 de octubre de 2026: **135 pruebas**, sin fallos, errores ni
+pruebas omitidas. No se conectó a MySQL ni se enviaron correos reales.
 
 ## Autenticación (RF-AUD-01)
 
@@ -45,6 +49,22 @@ límites de campos, fecha UTC y limpieza del contexto.
 
 Los motivos son códigos definidos por la aplicación, no mensajes de excepciones
 que puedan contener SQL, datos personales o secretos.
+
+### Recuperación de contraseña
+
+- `SOLICITAR_RECUPERACION`: generación de un token para una cuenta existente.
+- `RESTABLECER_CONTRASENA`: cambio de clave y consumo del token válido.
+- Ambas operaciones registran éxitos y fallos, incluidos correo inexistente,
+  token inválido, reutilizado, expirado o sin fecha, y errores de validación del JSON.
+- El ejecutor es `ANONIMO`, porque estas rutas no autentican al solicitante. El
+  ID de entidad identifica la cuenta afectada cuando se conoce, sin atribuirle
+  falsamente la identidad del solicitante ni copiar su correo a la bitácora.
+- No se registran el token, la clave enviada, su hash ni el cuerpo de la petición.
+  La escritura de la cuenta y el éxito auditado se revierten juntos si hay rollback.
+
+La recuperación se mantiene en modo simulado para esta entrega: no se configuran
+credenciales SMTP ni se prueba envío externo. El token de demostración se consulta
+en la consola local; no aparece en la consulta de auditoría.
 
 ## Operaciones críticas (RF-AUD-01)
 

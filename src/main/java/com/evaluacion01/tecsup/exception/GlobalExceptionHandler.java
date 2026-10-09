@@ -1,6 +1,10 @@
 package com.evaluacion01.tecsup.exception;
 
+import com.evaluacion01.tecsup.audit.ModuloAuditoria;
 import com.evaluacion01.tecsup.dto.ApiResponseDto;
+import com.evaluacion01.tecsup.service.AuditoriaService;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -15,7 +19,10 @@ import java.util.Map;
 @RestControllerAdvice(assignableTypes = {
         com.evaluacion01.tecsup.controller.PasswordRecoveryController.class
 })
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final AuditoriaService auditoriaService;
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponseDto> handleBadCredentials(BadCredentialsException ex) {
@@ -34,7 +41,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex,
+                                                                         HttpServletRequest request) {
+        String accion = request.getRequestURI().endsWith("/forgot-password")
+                ? "SOLICITAR_RECUPERACION" : "RESTABLECER_CONTRASENA";
+        auditoriaService.registrarFallo(null, null, ModuloAuditoria.AUTENTICACION, accion,
+                "Usuario", null, "DATOS_INVALIDOS", false);
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put(error.getField(), error.getDefaultMessage())
