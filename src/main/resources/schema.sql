@@ -38,3 +38,16 @@ CREATE TABLE IF NOT EXISTS usuarios (
     reset_token_expiry DATETIME,
     CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol) REFERENCES roles (id_rol)
 );
+
+-- RF-USR-04: un usuario puede tener varios roles. usuarios.id_rol se mantiene como rol principal.
+CREATE TABLE IF NOT EXISTS usuario_roles (
+    id_usuario BIGINT NOT NULL,
+    id_rol INT NOT NULL,
+    PRIMARY KEY (id_usuario, id_rol),
+    CONSTRAINT fk_usuariorol_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario) ON DELETE CASCADE,
+    CONSTRAINT fk_usuariorol_rol FOREIGN KEY (id_rol) REFERENCES roles (id_rol) ON DELETE CASCADE
+);
+
+-- Usuarios creados antes de RF-USR-04: su rol principal pasa también a usuario_roles.
+INSERT IGNORE INTO usuario_roles (id_usuario, id_rol)
+SELECT id_usuario, id_rol FROM usuarios;
