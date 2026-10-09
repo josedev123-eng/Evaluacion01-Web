@@ -51,3 +51,23 @@ CREATE TABLE IF NOT EXISTS usuario_roles (
 -- Usuarios creados antes de RF-USR-04: su rol principal pasa también a usuario_roles.
 INSERT IGNORE INTO usuario_roles (id_usuario, id_rol)
 SELECT id_usuario, id_rol FROM usuarios;
+
+-- RF-AUD-01: historial persistente; no borra registros ni depende de cuentas existentes.
+CREATE TABLE IF NOT EXISTS auditoria_logs (
+    id_auditoria BIGINT AUTO_INCREMENT PRIMARY KEY,
+    fecha_hora DATETIME(6) NOT NULL,
+    id_usuario_ejecutor BIGINT,
+    usuario_ejecutor VARCHAR(100) NOT NULL,
+    modulo VARCHAR(20) NOT NULL,
+    accion VARCHAR(50) NOT NULL,
+    entidad VARCHAR(50),
+    id_entidad BIGINT,
+    detalle VARCHAR(1000),
+    ip VARCHAR(45),
+    metodo_http VARCHAR(10),
+    ruta VARCHAR(255),
+    resultado VARCHAR(10) NOT NULL,
+    INDEX idx_auditoria_fecha (fecha_hora, id_auditoria),
+    INDEX idx_auditoria_modulo_fecha (modulo, fecha_hora),
+    INDEX idx_auditoria_usuario_fecha (usuario_ejecutor, fecha_hora)
+);

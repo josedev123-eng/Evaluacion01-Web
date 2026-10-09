@@ -462,6 +462,9 @@ migración. El procedimiento de actualización se mejorará en futuras entregas.
 
 ## Verificación
 
+Las entregas de Retamozo para RF-AUD-01 y RF-AUD-02 se documentan en
+[docs/auditoria.md](docs/auditoria.md), con sus políticas de persistencia y pruebas.
+
 En la revisión del 30 de septiembre de 2026 se ejecutó:
 
 ```powershell
