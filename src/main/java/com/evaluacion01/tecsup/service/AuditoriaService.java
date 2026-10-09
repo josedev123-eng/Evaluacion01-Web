@@ -44,7 +44,7 @@ public class AuditoriaService {
         try {
             AuditoriaLog registro = new AuditoriaLog();
             registro.setFechaHora(LocalDateTime.now());
-            registro.setUsuarioEjecutor(acortar(usuarioEjecutor, 50));
+            registro.setUsuarioEjecutor(acortar(usuarioEjecutor == null ? AuditoriaContext.getUsuario() : usuarioEjecutor, 50));
             registro.setModulo(modulo);
             registro.setAccion(accion);
             registro.setEntidad(entidad);
