@@ -7,7 +7,7 @@ public interface UsuarioService {
     List<Usuario> listarTodos();
     List<Usuario> buscar(String texto, String area, Integer idRol, Boolean estado);
     Usuario obtenerPorId(Long id);
-    Usuario registrarUsuario(Usuario usuario, List<Integer> idsRolesAdicionales);
-    Usuario actualizarUsuario(Long id, Usuario usuario, List<Integer> idsRolesAdicionales);
+    Usuario registrarUsuario(Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador);
+    Usuario actualizarUsuario(Long id, Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador);
     Usuario cambiarEstado(Long id, boolean activo, Usuario usuarioLogueado);
 }

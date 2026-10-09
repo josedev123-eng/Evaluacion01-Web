@@ -7,8 +7,11 @@ import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +36,11 @@ public class RolController {
 
     private final RolService rolService;
     private final AutorizacionService autorizacionService;
+
+    @InitBinder("rol")
+    public void configurarFormulario(WebDataBinder binder) {
+        binder.setAllowedFields("idRol", "nombre", "descripcion", "area");
+    }
 
     @GetMapping
     public String listar(Model model, HttpSession session) {
@@ -67,7 +75,7 @@ public class RolController {
     }
 
     @PostMapping("/guardar")
-    public String guardar(@ModelAttribute Rol rol, BindingResult bindingResult, HttpSession session,
+    public String guardar(@ModelAttribute("rol") Rol rol, BindingResult bindingResult, HttpSession session,
                            RedirectAttributes redirectAttributes) {
         if (!tienePermisoEditar(session)) {
             redirectAttributes.addFlashAttribute("error", "Tu rol no tiene permiso para crear/editar roles.");
@@ -78,9 +86,9 @@ public class RolController {
             return "redirect:/roles";
         }
         try {
-            rolService.guardar(rol);
+            rolService.guardar(rol, (Usuario) session.getAttribute("usuarioLogueado"));
             redirectAttributes.addFlashAttribute("exito", "Rol guardado correctamente");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | AccessDeniedException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/roles";
@@ -110,8 +118,12 @@ public class RolController {
             redirectAttributes.addFlashAttribute("error", "Tu rol no tiene permiso para asignar permisos.");
             return "redirect:/roles";
         }
-        rolService.asignarPermisos(id, permisoIds);
-        redirectAttributes.addFlashAttribute("exito", "Permisos actualizados correctamente");
+        try {
+            rolService.asignarPermisos(id, permisoIds, (Usuario) session.getAttribute("usuarioLogueado"));
+            redirectAttributes.addFlashAttribute("exito", "Permisos actualizados correctamente");
+        } catch (IllegalArgumentException | AccessDeniedException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
         return "redirect:/roles";
     }
 

@@ -17,7 +17,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByResetToken(String resetToken);
     boolean existsByUsuario(String usuario);
     boolean existsByCorreo(String correo);
-    long countByEstadoTrueAndRol_NombreIgnoreCase(String nombreRol);
+    // Cuenta cada administrador una sola vez, sea su rol principal o adicional.
+    @Query("""
+            SELECT COUNT(DISTINCT u.idUsuario) FROM Usuario u LEFT JOIN u.roles r
+            WHERE u.estado = true
+              AND (LOWER(TRIM(u.rol.nombre)) = LOWER(:nombreRol)
+                   OR LOWER(TRIM(r.nombre)) = LOWER(:nombreRol))
+            """)
+    long contarActivosConRol(@Param("nombreRol") String nombreRol);
 
     // RF-USR-05: búsqueda por texto (nombres, apellidos, DNI, correo o usuario) y filtros
     // opcionales por área, rol (principal o adicional) y estado. Un parámetro null no filtra.

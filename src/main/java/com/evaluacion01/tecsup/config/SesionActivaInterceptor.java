@@ -23,9 +23,14 @@ public class SesionActivaInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         HttpSession session = request.getSession(false);
         if (session == null || !(session.getAttribute("usuarioLogueado") instanceof Usuario enSesion)) {
+            if (esRutaProtegida(request)) {
+                response.sendRedirect(request.getContextPath() + "/login");
+                return false;
+            }
             return true;
         }
-        Usuario actual = usuarioRepository.findById(enSesion.getIdUsuario()).orElse(null);
+        Usuario actual = enSesion.getIdUsuario() == null ? null
+                : usuarioRepository.findById(enSesion.getIdUsuario()).orElse(null);
         if (actual == null || !Boolean.TRUE.equals(actual.getEstado())) {
             session.invalidate();
             response.sendRedirect(request.getContextPath() + "/login?cuentaInactiva");
@@ -33,5 +38,11 @@ public class SesionActivaInterceptor implements HandlerInterceptor {
         }
         session.setAttribute("usuarioLogueado", actual);
         return true;
+    }
+
+    private boolean esRutaProtegida(HttpServletRequest request) {
+        String ruta = request.getRequestURI().substring(request.getContextPath().length());
+        return "/dashboard".equals(ruta) || "/usuarios".equals(ruta) || ruta.startsWith("/usuarios/")
+                || "/roles".equals(ruta) || ruta.startsWith("/roles/");
     }
 }

@@ -8,9 +8,11 @@ import com.evaluacion01.tecsup.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -34,6 +36,12 @@ public class UsuarioController {
         this.usuarioService = usuarioService;
         this.rolService = rolService;
         this.autorizacionService = autorizacionService;
+    }
+
+    @InitBinder("usuarioForm")
+    public void configurarFormulario(WebDataBinder binder) {
+        binder.setAllowedFields("idUsuario", "nombres", "apellidos", "dni", "correo", "telefono",
+                "usuario", "contrasena", "area", "rol.idRol");
     }
 
     // Listar usuarios y preparar el objeto para el formulario.
@@ -65,13 +73,16 @@ public class UsuarioController {
         if (usuarioLogueado == null) {
             return "redirect:/login";
         }
-        if (!autorizacionService.tienePermiso(usuarioLogueado, MODULO, "EDITAR")) {
+        // Esta vista también incluye el listado: EDITAR no sustituye al permiso VER.
+        if (!autorizacionService.tienePermiso(usuarioLogueado, MODULO, "EDITAR")
+                || !autorizacionService.tienePermiso(usuarioLogueado, MODULO, "VER")) {
             return "redirect:/usuarios";
         }
         Usuario usuario;
         try {
             usuario = usuarioService.obtenerPorId(id);
-        } catch (IllegalArgumentException e) {
+            autorizacionService.validarEdicionUsuario(usuarioLogueado, usuario);
+        } catch (IllegalArgumentException | AccessDeniedException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/usuarios";
         }
@@ -102,21 +113,17 @@ public class UsuarioController {
             redirectAttributes.addFlashAttribute("error", "Datos del formulario inválidos. Verifica los campos obligatorios, el área y el rol seleccionado.");
             return "redirect:/usuarios";
         }
-        if (!rolService.perteneceAArea(usuario.getRol().getIdRol(), usuario.getArea())) {
-            redirectAttributes.addFlashAttribute("error", "El rol seleccionado no corresponde al área elegida.");
-            return "redirect:/usuarios";
-        }
         try {
             if (!esNuevo) {
-                usuarioService.actualizarUsuario(usuario.getIdUsuario(), usuario, idsRoles);
+                usuarioService.actualizarUsuario(usuario.getIdUsuario(), usuario, idsRoles, usuarioLogueado);
                 redirectAttributes.addFlashAttribute("exito", "Usuario actualizado correctamente");
             } else {
-                usuarioService.registrarUsuario(usuario, idsRoles);
+                usuarioService.registrarUsuario(usuario, idsRoles, usuarioLogueado);
                 redirectAttributes.addFlashAttribute("exito", "Usuario registrado correctamente");
             }
         } catch (DataIntegrityViolationException e) {
             redirectAttributes.addFlashAttribute("error", mensajeDuplicado(e));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException | AccessDeniedException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/usuarios";
@@ -141,7 +148,7 @@ public class UsuarioController {
             String estado = Boolean.TRUE.equals(usuario.getEstado()) ? "activado" : "desactivado";
             redirectAttributes.addFlashAttribute("exito",
                     "Usuario " + usuario.getUsuario() + " " + estado + " correctamente");
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException | AccessDeniedException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/usuarios";
@@ -155,10 +162,19 @@ public class UsuarioController {
                 .map(Rol::getIdRol)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        model.addAttribute("listaUsuarios", usuarioService.buscar(q, area, idRol, estadoFiltro));
+        List<Usuario> usuarios = usuarioService.buscar(q, area, idRol, estadoFiltro);
+        List<Rol> roles = rolService.listar();
+        boolean administrador = autorizacionService.esAdministrador(usuarioLogueado);
+        model.addAttribute("listaUsuarios", usuarios);
         model.addAttribute("usuarioForm", usuarioForm);
         model.addAttribute("idsRolesSeleccionados", idsRolesSeleccionados);
-        model.addAttribute("roles", rolService.listar());
+        model.addAttribute("roles", roles);
+        model.addAttribute("rolesAsignables", roles.stream()
+                .filter(rol -> administrador || !autorizacionService.esRolAdministrador(rol)).toList());
+        model.addAttribute("esAdministrador", administrador);
+        model.addAttribute("idsUsuariosProtegidos", usuarios.stream()
+                .filter(usuario -> !autorizacionService.puedeEditarUsuario(usuarioLogueado, usuario))
+                .map(Usuario::getIdUsuario).collect(Collectors.toSet()));
         model.addAttribute("filtroQ", q);
         model.addAttribute("filtroArea", area);
         model.addAttribute("filtroIdRol", idRol);

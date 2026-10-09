@@ -37,7 +37,9 @@
 
         <div class="form-section">
             <label class="form-label">Nombre</label>
-            <input type="text" th:field="*{nombre}" class="form-control" required maxlength="50">
+            <input type="text" th:field="*{nombre}" class="form-control" required maxlength="50"
+                   th:readonly="${@autorizacionService.esRolAdministrador(rol)}">
+            <div th:if="${@autorizacionService.esRolAdministrador(rol)}" class="form-text">El nombre Administrador está reservado y no se puede cambiar.</div>
 
             <label class="form-label mt-3">Descripción</label>
             <textarea th:field="*{descripcion}" class="form-control" maxlength="255"></textarea>

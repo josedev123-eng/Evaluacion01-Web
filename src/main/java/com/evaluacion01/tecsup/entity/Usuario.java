@@ -97,6 +97,7 @@ public class Usuario {
         }
         if (roles != null) {
             roles.stream()
+                    .filter(Objects::nonNull)
                     .filter(r -> rol == null || !Objects.equals(r.getIdRol(), rol.getIdRol()))
                     .forEach(asignados::add);
         }

@@ -17,18 +17,18 @@ import java.util.Set;
 @Service
 public class UsuarioServiceImpl implements UsuarioService {
 
-    private static final String ROL_ADMINISTRADOR = "Administrador";
-
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AutorizacionService autorizacionService;
 
     @Autowired
     public UsuarioServiceImpl(UsuarioRepository usuarioRepository, RolRepository rolRepository,
-                              PasswordEncoder passwordEncoder) {
+                              PasswordEncoder passwordEncoder, AutorizacionService autorizacionService) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.passwordEncoder = passwordEncoder;
+        this.autorizacionService = autorizacionService;
     }
 
     @Override
@@ -52,44 +52,47 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional
-    public Usuario registrarUsuario(Usuario usuario, List<Integer> idsRolesAdicionales) {
-        usuario.setContrasena(passwordEncoder.encode(usuario.getContrasena()));
-        usuario.setFechaRegistro(LocalDateTime.now());
-        if (usuario.getEstado() == null) {
-            usuario.setEstado(true);
+    public Usuario registrarUsuario(Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador) {
+        Rol principal = obtenerRolPrincipal(usuario);
+        Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuario.getArea());
+        autorizacionService.validarAsignacionRoles(operador, null, roles);
+        if (usuario.getContrasena() == null || usuario.getContrasena().isBlank()) {
+            throw new IllegalArgumentException("La contraseña es obligatoria para registrar un usuario.");
         }
-        Rol principal = obtenerRol(usuario.getRol().getIdRol());
-        usuario.setRol(principal);
-        usuario.setRoles(armarRoles(principal, idsRolesAdicionales, usuario.getArea()));
-        return usuarioRepository.save(usuario);
+        // No persistir id, estado, tokens ni asociaciones enviados fuera del formulario.
+        Usuario nuevo = new Usuario();
+        copiarDatosPersonales(usuario, nuevo);
+        nuevo.setContrasena(passwordEncoder.encode(usuario.getContrasena()));
+        nuevo.setFechaRegistro(LocalDateTime.now());
+        nuevo.setEstado(true);
+        nuevo.setRol(principal);
+        nuevo.setRoles(roles);
+        return usuarioRepository.save(nuevo);
     }
 
     @Override
     @Transactional
-    public Usuario actualizarUsuario(Long id, Usuario usuarioActualizado, List<Integer> idsRolesAdicionales) {
+    public Usuario actualizarUsuario(Long id, Usuario usuarioActualizado, List<Integer> idsRolesAdicionales,
+                                     Usuario operador) {
         Usuario usuarioExistente = obtenerPorId(id);
-
-        usuarioExistente.setNombres(usuarioActualizado.getNombres());
-        usuarioExistente.setApellidos(usuarioActualizado.getApellidos());
-        usuarioExistente.setDni(usuarioActualizado.getDni());
-        usuarioExistente.setCorreo(usuarioActualizado.getCorreo());
-        usuarioExistente.setTelefono(usuarioActualizado.getTelefono());
-        usuarioExistente.setUsuario(usuarioActualizado.getUsuario());
+        autorizacionService.validarEdicionUsuario(operador, usuarioExistente);
+        Rol principal = obtenerRolPrincipal(usuarioActualizado);
+        Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuarioActualizado.getArea());
+        autorizacionService.validarAsignacionRoles(operador, usuarioExistente, roles);
+        validarConservacionAdministrador(usuarioExistente, roles);
+        copiarDatosPersonales(usuarioActualizado, usuarioExistente);
 
         if (usuarioActualizado.getContrasena() != null && !usuarioActualizado.getContrasena().isEmpty()) {
             usuarioExistente.setContrasena(passwordEncoder.encode(usuarioActualizado.getContrasena()));
         }
-
-        usuarioExistente.setArea(usuarioActualizado.getArea());
 
         // RF-USR-03: el estado ya NO se toma del formulario de edición. El formulario no
         // envía "estado" y la entidad lo inicializa en true, así que antes editar un
         // usuario inactivo lo volvía a activar sin querer. El estado solo cambia con
         // cambiarEstado().
 
-        Rol principal = obtenerRol(usuarioActualizado.getRol().getIdRol());
         usuarioExistente.setRol(principal);
-        usuarioExistente.setRoles(armarRoles(principal, idsRolesAdicionales, usuarioExistente.getArea()));
+        usuarioExistente.setRoles(roles);
 
         return usuarioRepository.save(usuarioExistente);
     }
@@ -100,12 +103,13 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Transactional
     public Usuario cambiarEstado(Long id, boolean activo, Usuario usuarioLogueado) {
         Usuario usuario = obtenerPorId(id);
+        autorizacionService.validarEdicionUsuario(usuarioLogueado, usuario);
         if (!activo) {
             if (usuarioLogueado != null && usuario.getIdUsuario().equals(usuarioLogueado.getIdUsuario())) {
                 throw new IllegalStateException("No puedes desactivar tu propia cuenta.");
             }
-            if (Boolean.TRUE.equals(usuario.getEstado()) && esAdministrador(usuario)
-                    && usuarioRepository.countByEstadoTrueAndRol_NombreIgnoreCase(ROL_ADMINISTRADOR) <= 1) {
+            if (Boolean.TRUE.equals(usuario.getEstado()) && autorizacionService.tieneRolAdministrador(usuario)
+                    && usuarioRepository.contarActivosConRol(AutorizacionService.ROL_ADMINISTRADOR) <= 1) {
                 throw new IllegalStateException("No se puede desactivar al último administrador activo.");
             }
         }
@@ -116,6 +120,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     // RF-USR-04: el rol principal siempre forma parte de los roles asignados. Todos los
     // roles deben pertenecer al área del usuario, igual que la regla del rol principal.
     private Set<Rol> armarRoles(Rol principal, List<Integer> idsRolesAdicionales, String area) {
+        validarArea(principal, area);
         Set<Rol> roles = new LinkedHashSet<>();
         roles.add(principal);
         if (idsRolesAdicionales != null) {
@@ -124,9 +129,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                     continue;
                 }
                 Rol rol = obtenerRol(idRol);
-                if (area == null || !rol.getArea().equalsIgnoreCase(area.trim())) {
-                    throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' no corresponde al área elegida.");
-                }
+                validarArea(rol, area);
                 roles.add(rol);
             }
         }
@@ -138,7 +141,34 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .orElseThrow(() -> new IllegalArgumentException("Rol no encontrado: " + idRol));
     }
 
-    private boolean esAdministrador(Usuario usuario) {
-        return usuario.getRol() != null && ROL_ADMINISTRADOR.equalsIgnoreCase(usuario.getRol().getNombre());
+    private Rol obtenerRolPrincipal(Usuario usuario) {
+        if (usuario.getRol() == null || usuario.getRol().getIdRol() == null) {
+            throw new IllegalArgumentException("Debes seleccionar un rol principal.");
+        }
+        return obtenerRol(usuario.getRol().getIdRol());
+    }
+
+    private void validarArea(Rol rol, String area) {
+        if (area == null || rol.getArea() == null || !rol.getArea().equalsIgnoreCase(area.trim())) {
+            throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' no corresponde al área elegida.");
+        }
+    }
+
+    private void validarConservacionAdministrador(Usuario existente, Set<Rol> nuevosRoles) {
+        if (Boolean.TRUE.equals(existente.getEstado()) && autorizacionService.tieneRolAdministrador(existente)
+                && nuevosRoles.stream().noneMatch(autorizacionService::esRolAdministrador)
+                && usuarioRepository.contarActivosConRol(AutorizacionService.ROL_ADMINISTRADOR) <= 1) {
+            throw new IllegalStateException("No se puede quitar el rol al último administrador activo.");
+        }
+    }
+
+    private void copiarDatosPersonales(Usuario origen, Usuario destino) {
+        destino.setNombres(origen.getNombres());
+        destino.setApellidos(origen.getApellidos());
+        destino.setDni(origen.getDni());
+        destino.setCorreo(origen.getCorreo());
+        destino.setTelefono(origen.getTelefono());
+        destino.setUsuario(origen.getUsuario());
+        destino.setArea(origen.getArea().trim());
     }
 }

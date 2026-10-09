@@ -104,7 +104,7 @@ existente (incluyendo cambiar su contraseña o su rol) sin crear uno nuevo.
 - [`Usuario.roles`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) (tabla `usuario_roles` en [`schema.sql`](src/main/resources/schema.sql)). `usuarios.id_rol` se mantiene como **rol principal** y siempre está incluido en `roles`. `getRolesAsignados()` devuelve el principal primero y luego los demás.
 - El formulario tiene casillas "Roles adicionales" filtradas por el área elegida; la tabla muestra todos los roles (el principal resaltado).
 - Los usuarios existentes se migran solos: `schema.sql` copia su `id_rol` a `usuario_roles`.
-- `AutorizacionService` sigue evaluando permisos con el rol principal; usar todos los roles es parte de RF-ROL-03.
+- `AutorizacionService` combina los permisos de todos los roles asignados (RF-ROL-03).
 
 ### RF-USR-05 — Búsqueda y filtros de usuarios
 **Responsable:** Jose Rojas Condor
@@ -136,7 +136,7 @@ existente (incluyendo cambiar su contraseña o su rol) sin crear uno nuevo.
 - Tabla intermedia `rol_permisos` (ver [`schema.sql`](src/main/resources/schema.sql)) — relación muchos-a-muchos entre roles y permisos.
 - **Se comprueban permisos por módulo y acción**, no solo se guardan:
   [`AutorizacionService.tienePermiso()`](src/main/java/com/evaluacion01/tecsup/service/AutorizacionService.java)
-  revisa si el rol del usuario logueado tiene el permiso (módulo + nombre) requerido
+  revisa si alguno de los roles del usuario logueado tiene el permiso (módulo + nombre) requerido
   para cada acción. `UsuarioController` y `RolController` llaman a este servicio antes
   de listar, crear, editar o cambiar el estado — si no tiene el permiso, se le
   redirige sin ejecutar la acción, con un mensaje de "Tu rol no tiene permiso...".
@@ -146,6 +146,45 @@ existente (incluyendo cambiar su contraseña o su rol) sin crear uno nuevo.
   **"Administrador"** (por nombre, sin importar mayúsculas) tiene acceso total
   automático, sin depender de sus permisos asignados — así no te quedas fuera del
   sistema si a ese rol se le olvida marcar algún checkbox.
+
+### RF-ROL-03 — Permisos para múltiples roles
+**Responsable:** Sovero Campoverde Karim Alexander
+**Para qué sirve:** las acciones y la navegación utilizan la unión de los permisos
+del rol principal y de los adicionales. No es necesario cambiar el rol principal
+para aprovechar un permiso de otro rol.
+**Dónde está:** [`AutorizacionService`](src/main/java/com/evaluacion01/tecsup/service/AutorizacionService.java).
+- Los usuarios anteriores sin filas en `usuario_roles` conservan los permisos del principal.
+- Administrador concede acceso total tanto como principal como adicional.
+- Se verifica la cuenta persistida y su estado, no nombres de roles enviados en un
+  formulario ni una copia obsoleta de la sesión. Cambiar permisos se refleja en la
+  siguiente petición; una cuenta inactiva o eliminada no conserva acceso.
+- La protección del último administrador cuenta cuentas distintas con Administrador
+  en cualquiera de sus roles, y también impide quitarle ese rol al último activo.
+
+### RF-ROL-04 — Impedir accesos indebidos y autoasignación de Administrador
+**Responsable:** Sovero Campoverde Karim Alexander
+**Reglas aplicadas en el servidor:**
+- Solo un Administrador activo puede crear/editar roles o asignar sus permisos.
+  `roles:EDITAR` no concede esa facultad a otras cuentas, aunque esté asignado en la BD.
+- Solo un Administrador puede asignar Administrador, ya sea principal o adicional,
+  crear cuentas administrativas, editar sus datos/contraseña o cambiar su estado.
+- Un operador no administrador puede modificar sus datos personales, pero no su
+  conjunto de roles. Tampoco puede conceder permisos que no posee ni modificar
+  cuentas con permisos superiores para tomar su contraseña.
+- El nombre del rol Administrador es reservado: no se puede renombrar para quitar
+  o conceder acceso total por esa vía.
+- Los servicios de usuarios y roles reciben al operador autenticado y validan la
+  operación antes de modificar entidades; no basta con ocultar botones.
+- Los formularios solo enlazan campos permitidos. No aceptan inyección de
+  `estado`, tokens de recuperación, asociaciones de roles o permisos anidados.
+- Usuarios, roles y dashboard exigen sesión. Los formularios POST requieren CSRF;
+  Thymeleaf inserta el token automáticamente. Los dos endpoints públicos de
+  recuperación de contraseña mantienen su flujo JSON sin token CSRF.
+
+La interfaz oculta Administrador de los roles asignables a operadores, identifica
+cuentas protegidas y conserva el catálogo completo en los filtros de búsqueda.
+Estas reglas no implementan auditoría ni envío de correo real: corresponden a las
+ramas de Edu y Retamozo.
 
 ## Historial de integración
 
@@ -234,7 +273,7 @@ operación manual exclusiva de la base local.
 | `usuarios:CREAR` | Registrar cuentas |
 | `usuarios:EDITAR` | Editar cuentas y activar/desactivar su estado |
 | `roles:VER` | Consultar el listado de roles |
-| `roles:EDITAR` | Crear/editar roles y asignar sus permisos |
+| `roles:EDITAR` | Crear/editar roles y asignar sus permisos, reservado al Administrador |
 
 El área filtra los roles disponibles, pero **no concede permisos** por sí misma.
 No existe un permiso independiente `roles:CREAR` en esta entrega. El rol denominado
@@ -435,35 +474,49 @@ Esta ejecución omitió pruebas y no valida los flujos de negocio ni el renderiz
 de todas las vistas. El entorno de verificación utilizó JDK 25 con objetivo Java 17;
 queda pendiente verificar la ejecución específicamente con JDK 17.
 
-Para ejecutar la prueba existente en Windows:
+Para ejecutar las pruebas en Windows:
 
 ```powershell
 .\mvnw.cmd test
 ```
 
-En Linux/macOS utiliza `sh ./mvnw test`. Solo existe una prueba de carga de contexto;
-depende de la base MySQL configurada y puede ejecutar la inicialización del esquema.
-No uses una base con datos importantes para pruebas. Todavía no hay cobertura
-automatizada de permisos, edición de usuarios o recuperación de contraseña.
+En Linux/macOS utiliza `sh ./mvnw test`. Las pruebas usan el perfil `test` y una base
+H2 en memoria, sin conectar a MySQL ni importar la semilla. Se incluyen:
+- `AutorizacionServiceTest`: unión de permisos, roles adicionales, compatibilidad
+  del principal y rechazo de identidades obsoletas, inexistentes o inactivas.
+- `AutorizacionIntegrationTests`: peticiones reales mediante MockMvc, renderizado
+  de formularios, CSRF, autoasignación de Administrador, cuentas protegidas,
+  permisos superiores, binding seguro, último administrador y cambios de permisos.
+- `TecsupApplicationTests`: carga del contexto con la misma configuración aislada.
+
+Para compilar y empaquetar ejecutando también las pruebas:
+
+```powershell
+.\mvnw.cmd package
+```
+
+En la verificación de RF-ROL-03/04 del 8 de octubre de 2026, este comando finalizó
+con `BUILD SUCCESS`: **42 pruebas, sin fallos ni pruebas omitidas**, usando JDK 21
+con objetivo Java 17 y H2 en memoria.
+
+Estas pruebas no sustituyen una verificación contra MySQL ni validan SMTP,
+auditoría o cambios administrativos concurrentes. Sigue pendiente verificar
+específicamente la ejecución con JDK 17.
 
 ## Pendientes posteriores
 
-Los siguientes problemas fueron detectados en la revisión de la Prueba 1 y no están
-corregidos todavía:
+Los pendientes de sesiones, estado inactivo, último administrador y escalada de
+privilegios indicados en la Prueba 1 se abordaron en RF-USR-03 y RF-ROL-03/04.
+Permanecen pendientes:
 
-- Restringir la creación de administradores y la modificación de cuentas superiores:
-  actualmente el coordinador puede concederse el rol Administrador.
-- Revocar o actualizar sesiones al desactivar cuentas o cambiar sus roles.
-- Conservar el estado inactivo al editar datos; actualmente la edición puede reactivar
-  una cuenta sin solicitarlo.
-- Proteger al último administrador activo para evitar perder el acceso al sistema.
+- Verificar y reforzar la consistencia ante cambios administrativos concurrentes.
 - Mantener consistentes las áreas de usuarios al cambiar el área de un rol.
 - Incluir el área del administrador en la semilla, sin necesitar el ajuste manual.
 - Reforzar validaciones de servidor, normalizar DNI vacíos y manejar referencias inválidas.
-- Habilitar protección CSRF, rotar la sesión tras el login y separar configuración local
+- Rotar la sesión tras el login, cambiar el cierre de sesión GET a POST y separar configuración local
   de producción para no exponer trazas ni mensajes internos.
 - Reforzar recuperación de contraseña, límites de solicitudes e invalidación de tokens.
-- Incorporar migraciones, pruebas aisladas y módulos hospitalarios adicionales.
+- Incorporar migraciones, cobertura de otros flujos y módulos hospitalarios adicionales.
 
 ## Antes de publicar
 

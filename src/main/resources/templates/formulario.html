@@ -99,7 +99,7 @@
             <label class="form-label">Rol principal:</label>
             <select th:field="*{rol.idRol}" class="form-select" required>
                 <option value="">-- Seleccione un Rol --</option>
-                <option th:each="r : ${roles}" th:value="${r.idRol}" th:text="${r.nombre}"
+                <option th:each="r : ${rolesAsignables}" th:value="${r.idRol}" th:text="${r.nombre}"
                         th:attr="data-area=${r.area}"></option>
             </select>
             <div class="form-text">Primero selecciona un área para ver sus roles disponibles.</div>
@@ -110,7 +110,7 @@
     <div class="mb-3">
         <label class="form-label">Roles adicionales:</label>
         <div class="roles-adicionales border rounded p-3">
-            <div th:each="r : ${roles}" class="form-check form-check-inline rol-adicional" th:attr="data-area=${r.area}">
+            <div th:each="r : ${rolesAsignables}" class="form-check form-check-inline rol-adicional" th:attr="data-area=${r.area}">
                 <input class="form-check-input" type="checkbox" name="idsRoles"
                        th:id="'rolAdicional' + ${r.idRol}" th:value="${r.idRol}"
                        th:checked="${idsRolesSeleccionados.contains(r.idRol)}">
@@ -118,7 +118,8 @@
             </div>
             <span class="small text-muted sin-roles-adicionales">No hay otros roles en esta área.</span>
         </div>
-        <div class="form-text">Opcional. Un usuario puede tener varios roles de su misma área.</div>
+        <div class="form-text">Opcional. Los permisos de todos los roles de la misma área se combinan.</div>
+        <div th:unless="${esAdministrador}" class="form-text">No puedes asignar Administrador, cambiar tus propios roles ni conceder permisos superiores a los tuyos.</div>
     </div>
     </section>
 
@@ -203,8 +204,9 @@
         </td>
         <td>
             <span th:unless="${puedeEditar}" class="text-muted small">Sin permiso</span>
-            <a th:if="${puedeEditar}" th:href="@{/usuarios/editar/{id}(id=${u.idUsuario})}" class="btn btn-sm btn-warning">Editar</a>
-            <form th:if="${puedeEditar and u.idUsuario != idUsuarioLogueado}"
+            <span th:if="${puedeEditar and idsUsuariosProtegidos.contains(u.idUsuario)}" class="badge bg-secondary">Cuenta protegida</span>
+            <a th:if="${puedeEditar and !idsUsuariosProtegidos.contains(u.idUsuario)}" th:href="@{/usuarios/editar/{id}(id=${u.idUsuario})}" class="btn btn-sm btn-warning">Editar</a>
+            <form th:if="${puedeEditar and !idsUsuariosProtegidos.contains(u.idUsuario) and u.idUsuario != idUsuarioLogueado}"
                   th:action="@{/usuarios/{id}/estado(id=${u.idUsuario})}" method="post" class="d-inline form-estado"
                   th:attr="data-confirmar=${u.estado} ? ('¿Desactivar a ' + ${u.usuario} + '? No podrá iniciar sesión y se cerrará su sesión actual.') : ('¿Activar a ' + ${u.usuario} + '?')">
                 <input type="hidden" name="activo" th:value="${!u.estado}">
