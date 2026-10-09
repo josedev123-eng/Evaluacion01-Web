@@ -18,5 +18,7 @@ public interface AuditoriaLogRepository extends JpaRepository<AuditoriaLog, Long
 
     List<AuditoriaLog> findByUsuarioEjecutorOrderByFechaHoraDesc(String usuarioEjecutor);
 
+    List<AuditoriaLog> findByModuloAndUsuarioEjecutorOrderByFechaHoraDesc(String modulo, String usuarioEjecutor);
+
     long countByModulo(String modulo);
 }

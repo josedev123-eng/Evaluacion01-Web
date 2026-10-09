@@ -8,7 +8,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
-// Agrega a todas las vistas si el usuario logueado puede ver Usuarios/Roles,
+// Agrega a todas las vistas si el usuario logueado puede ver Usuarios/Roles/Auditoría,
 // para poder ocultar esos enlaces del menú cuando su rol no tiene permiso.
 @ControllerAdvice(annotations = org.springframework.stereotype.Controller.class)
 @RequiredArgsConstructor
@@ -21,5 +21,6 @@ public class NavegacionModelAdvice {
         Usuario usuario = (Usuario) session.getAttribute("usuarioLogueado");
         model.addAttribute("puedeVerUsuarios", autorizacionService.tienePermiso(usuario, "usuarios", "VER"));
         model.addAttribute("puedeVerRoles", autorizacionService.tienePermiso(usuario, "roles", "VER"));
+        model.addAttribute("puedeVerAuditoria", autorizacionService.tienePermiso(usuario, "auditoria", "VER"));
     }
 }

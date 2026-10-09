@@ -59,6 +59,20 @@ public class AuditoriaService {
     }
 
     public List<AuditoriaLog> listar() {
+        return listarFiltrado(null, null);
+    }
+
+    // Consulta para la pantalla de auditoría: acepta filtro por módulo y/o por usuario.
+    public List<AuditoriaLog> listarFiltrado(String modulo, String usuarioEjecutor) {
+        if (modulo != null && usuarioEjecutor != null) {
+            return auditoriaLogRepository.findByModuloAndUsuarioEjecutorOrderByFechaHoraDesc(modulo, usuarioEjecutor);
+        }
+        if (modulo != null) {
+            return auditoriaLogRepository.findByModuloOrderByFechaHoraDesc(modulo);
+        }
+        if (usuarioEjecutor != null) {
+            return auditoriaLogRepository.findByUsuarioEjecutorOrderByFechaHoraDesc(usuarioEjecutor);
+        }
         return auditoriaLogRepository.findAllByOrderByFechaHoraDesc();
     }
 

@@ -18,7 +18,8 @@ INSERT IGNORE INTO permisos (nombre, modulo) VALUES
     ('CREAR', 'usuarios'),
     ('EDITAR', 'usuarios'),
     ('VER', 'roles'),
-    ('EDITAR', 'roles');
+    ('EDITAR', 'roles'),
+    ('VER', 'auditoria');
 
 INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
@@ -35,7 +36,7 @@ WHERE r.nombre = 'Coordinador administrativo';
 INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
 FROM roles r
-JOIN permisos p ON p.nombre = 'VER' AND p.modulo IN ('usuarios', 'roles')
+JOIN permisos p ON p.nombre = 'VER' AND p.modulo IN ('usuarios', 'roles', 'auditoria')
 WHERE r.nombre = 'Auditor administrativo';
 
 -- Usuario administrador de ejemplo: usuario=admin, contraseña=admin123
