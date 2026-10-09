@@ -44,5 +44,22 @@ límites de campos, fecha UTC y limpieza del contexto.
   Un logout anónimo no genera un cierre ficticio de usuario.
 
 Los motivos son códigos definidos por la aplicación, no mensajes de excepciones
-que puedan contener SQL, datos personales o secretos. La conexión a cambios de
-usuarios, roles y permisos y la consulta administrativa continúan en las siguientes entregas.
+que puedan contener SQL, datos personales o secretos.
+
+## Operaciones críticas (RF-AUD-01)
+
+- Usuarios: `CREAR_USUARIO`, `EDITAR_USUARIO`, `ACTIVAR_USUARIO`, `DESACTIVAR_USUARIO`.
+  Se informa el ID afectado, los nombres de campos modificados y los IDs de roles
+  anteriores y nuevos. No se copian valores de DNI, teléfono, correo o contraseña.
+- Roles: `CREAR_ROL`, `EDITAR_ROL`, con el ID y los nombres de campos modificados.
+- Permisos: `ASIGNAR_PERMISOS`, incluyendo los IDs anteriores y posteriores del rol.
+- Los servicios registran también rechazos en llamadas fuera de HTTP. Los
+  controladores registran validaciones y permisos que impiden llegar al servicio,
+  sin duplicar los eventos de operaciones que sí lo alcanzaron.
+- Los intentos sin sesión, sesiones inactivas y formularios sin CSRF se registran
+  como `DENEGADO`. Ninguno produce un evento de modificación exitosa.
+
+Las operaciones conservan todas las protecciones de Sovero. Se ejecuta `flush`
+antes de informar éxito para detectar violaciones de integridad dentro de la
+operación, y los éxitos se revierten junto con el cambio si la transacción falla.
+La consulta administrativa se incorpora en RF-AUD-02.

@@ -1,5 +1,6 @@
 package com.evaluacion01.tecsup.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,7 +11,10 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final AuditoriaAccesoDenegadoHandler auditoriaAccesoDenegadoHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -25,6 +29,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.ignoringRequestMatchers(
                         "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"))
+                .exceptionHandling(ex -> ex.accessDeniedHandler(auditoriaAccesoDenegadoHandler))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
 
         return http.build();

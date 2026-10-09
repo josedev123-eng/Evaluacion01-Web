@@ -1,5 +1,6 @@
 package com.evaluacion01.tecsup.controller;
 
+import com.evaluacion01.tecsup.audit.ModuloAuditoria;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ import com.evaluacion01.tecsup.entity.Permiso;
 import com.evaluacion01.tecsup.entity.Rol;
 import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.service.AutorizacionService;
+import com.evaluacion01.tecsup.service.AuditoriaService;
 import com.evaluacion01.tecsup.service.RolService;
 
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,7 @@ public class RolController {
 
     private final RolService rolService;
     private final AutorizacionService autorizacionService;
+    private final AuditoriaService auditoriaService;
 
     @InitBinder("rol")
     public void configurarFormulario(WebDataBinder binder) {
@@ -76,12 +79,15 @@ public class RolController {
 
     @PostMapping("/guardar")
     public String guardar(@ModelAttribute("rol") Rol rol, BindingResult bindingResult, HttpSession session,
-                           RedirectAttributes redirectAttributes) {
+                            RedirectAttributes redirectAttributes) {
+        String accion = rol.getIdRol() == null ? "CREAR_ROL" : "EDITAR_ROL";
         if (!tienePermisoEditar(session)) {
+            registrarRechazo(session, ModuloAuditoria.ROLES, accion, rol.getIdRol(), "SIN_PERMISO", true);
             redirectAttributes.addFlashAttribute("error", "Tu rol no tiene permiso para crear/editar roles.");
             return "redirect:/roles";
         }
         if (bindingResult.hasErrors()) {
+            registrarRechazo(session, ModuloAuditoria.ROLES, accion, rol.getIdRol(), "FORMULARIO_INVALIDO", false);
             redirectAttributes.addFlashAttribute("error", "Datos del formulario inválidos. Verifica el nombre del rol.");
             return "redirect:/roles";
         }
@@ -115,6 +121,7 @@ public class RolController {
                                    @RequestParam(name = "permisoIds", required = false) List<Integer> permisoIds,
                                    HttpSession session, RedirectAttributes redirectAttributes) {
         if (!tienePermisoEditar(session)) {
+            registrarRechazo(session, ModuloAuditoria.PERMISOS, "ASIGNAR_PERMISOS", id, "SIN_PERMISO", true);
             redirectAttributes.addFlashAttribute("error", "Tu rol no tiene permiso para asignar permisos.");
             return "redirect:/roles";
         }
@@ -130,5 +137,11 @@ public class RolController {
     private boolean tienePermisoEditar(HttpSession session) {
         Usuario usuarioLogueado = (Usuario) session.getAttribute("usuarioLogueado");
         return usuarioLogueado != null && autorizacionService.tienePermiso(usuarioLogueado, MODULO, "EDITAR");
+    }
+
+    private void registrarRechazo(HttpSession session, ModuloAuditoria modulo, String accion, Integer id,
+                                  String motivo, boolean denegado) {
+        auditoriaService.registrarFallo((Usuario) session.getAttribute("usuarioLogueado"), null,
+                modulo, accion, "Rol", id, motivo, denegado);
     }
 }

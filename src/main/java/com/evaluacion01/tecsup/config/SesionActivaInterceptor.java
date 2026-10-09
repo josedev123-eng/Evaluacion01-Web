@@ -1,7 +1,9 @@
 package com.evaluacion01.tecsup.config;
 
+import com.evaluacion01.tecsup.audit.ModuloAuditoria;
 import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.repository.UsuarioRepository;
+import com.evaluacion01.tecsup.service.AuditoriaService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -18,12 +20,16 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class SesionActivaInterceptor implements HandlerInterceptor {
 
     private final UsuarioRepository usuarioRepository;
+    private final AuditoriaService auditoriaService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         HttpSession session = request.getSession(false);
         if (session == null || !(session.getAttribute("usuarioLogueado") instanceof Usuario enSesion)) {
             if (esRutaProtegida(request)) {
+                String ruta = request.getRequestURI().substring(request.getContextPath().length());
+                auditoriaService.registrarFallo(null, null, ModuloAuditoria.deRuta(ruta), "ACCESO_DENEGADO",
+                        null, null, "SIN_SESION", true);
                 response.sendRedirect(request.getContextPath() + "/login");
                 return false;
             }
@@ -32,6 +38,8 @@ public class SesionActivaInterceptor implements HandlerInterceptor {
         Usuario actual = enSesion.getIdUsuario() == null ? null
                 : usuarioRepository.findById(enSesion.getIdUsuario()).orElse(null);
         if (actual == null || !Boolean.TRUE.equals(actual.getEstado())) {
+            auditoriaService.registrarFallo(enSesion, null, ModuloAuditoria.AUTENTICACION, "SESION_INVALIDA",
+                    "Usuario", enSesion.getIdUsuario(), "SESION_INACTIVA_O_ELIMINADA", true);
             session.invalidate();
             response.sendRedirect(request.getContextPath() + "/login?cuentaInactiva");
             return false;

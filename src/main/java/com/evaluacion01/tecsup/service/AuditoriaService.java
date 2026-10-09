@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -43,6 +44,13 @@ public class AuditoriaService {
             // No sustituir el error original ni imprimir parámetros SQL o datos sensibles.
             LOGGER.error("No se pudo guardar el intento de auditoría [{}][{}]", modulo, accion);
         }
+    }
+
+    public void registrarFalloOperacion(Usuario operador, ModuloAuditoria modulo, String accion,
+                                       String entidad, Number idEntidad, RuntimeException causa) {
+        boolean denegado = causa instanceof AccessDeniedException;
+        registrarFallo(operador, null, modulo, accion, entidad, idEntidad,
+                denegado ? "SIN_PERMISO" : "OPERACION_RECHAZADA", denegado);
     }
 
     private AuditoriaLog crear(Usuario operador, String identificadorIntentado, ModuloAuditoria modulo,

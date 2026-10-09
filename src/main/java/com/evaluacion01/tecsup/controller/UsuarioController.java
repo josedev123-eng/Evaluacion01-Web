@@ -1,8 +1,10 @@
 package com.evaluacion01.tecsup.controller;
 
+import com.evaluacion01.tecsup.audit.ModuloAuditoria;
 import com.evaluacion01.tecsup.entity.Rol;
 import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.service.AutorizacionService;
+import com.evaluacion01.tecsup.service.AuditoriaService;
 import com.evaluacion01.tecsup.service.RolService;
 import com.evaluacion01.tecsup.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
@@ -30,12 +32,15 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
     private final RolService rolService;
     private final AutorizacionService autorizacionService;
+    private final AuditoriaService auditoriaService;
 
     @Autowired
-    public UsuarioController(UsuarioService usuarioService, RolService rolService, AutorizacionService autorizacionService) {
+    public UsuarioController(UsuarioService usuarioService, RolService rolService, AutorizacionService autorizacionService,
+                             AuditoriaService auditoriaService) {
         this.usuarioService = usuarioService;
         this.rolService = rolService;
         this.autorizacionService = autorizacionService;
+        this.auditoriaService = auditoriaService;
     }
 
     @InitBinder("usuarioForm")
@@ -105,11 +110,13 @@ public class UsuarioController {
         boolean esNuevo = usuario.getIdUsuario() == null;
         String permisoRequerido = esNuevo ? "CREAR" : "EDITAR";
         if (!autorizacionService.tienePermiso(usuarioLogueado, MODULO, permisoRequerido)) {
+            registrarRechazo(usuarioLogueado, esNuevo ? "CREAR_USUARIO" : "EDITAR_USUARIO", usuario.getIdUsuario(), "SIN_PERMISO", true);
             redirectAttributes.addFlashAttribute("error", "Tu rol no tiene permiso para " + (esNuevo ? "crear" : "editar") + " usuarios.");
             return "redirect:/usuarios";
         }
         if (bindingResult.hasErrors() || usuario.getArea() == null || usuario.getArea().isBlank()
                 || usuario.getRol() == null || usuario.getRol().getIdRol() == null) {
+            registrarRechazo(usuarioLogueado, esNuevo ? "CREAR_USUARIO" : "EDITAR_USUARIO", usuario.getIdUsuario(), "FORMULARIO_INVALIDO", false);
             redirectAttributes.addFlashAttribute("error", "Datos del formulario inválidos. Verifica los campos obligatorios, el área y el rol seleccionado.");
             return "redirect:/usuarios";
         }
@@ -140,6 +147,7 @@ public class UsuarioController {
             return "redirect:/login";
         }
         if (!autorizacionService.tienePermiso(usuarioLogueado, MODULO, "EDITAR")) {
+            registrarRechazo(usuarioLogueado, activo ? "ACTIVAR_USUARIO" : "DESACTIVAR_USUARIO", id, "SIN_PERMISO", true);
             redirectAttributes.addFlashAttribute("error", "Tu rol no tiene permiso para activar/desactivar usuarios.");
             return "redirect:/usuarios";
         }
@@ -198,5 +206,9 @@ public class UsuarioController {
             return "Ya existe un usuario con ese DNI.";
         }
         return "No se pudo guardar: algunos datos ya están registrados con otro usuario.";
+    }
+
+    private void registrarRechazo(Usuario operador, String accion, Long id, String motivo, boolean denegado) {
+        auditoriaService.registrarFallo(operador, null, ModuloAuditoria.USUARIOS, accion, "Usuario", id, motivo, denegado);
     }
 }

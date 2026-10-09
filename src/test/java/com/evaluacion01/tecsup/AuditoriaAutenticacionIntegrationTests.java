@@ -159,7 +159,9 @@ class AuditoriaAutenticacionIntegrationTests {
     void noRegistraUnLoginExitosoSiElFormularioNoTieneCsrf() throws Exception {
         mvc.perform(post("/login").param("identificador", usuario.getUsuario()).param("contrasena", "claveValida"))
                 .andExpect(status().isForbidden());
-        assertThat(logs.count()).isZero();
+        AuditoriaLog evento = unicoEvento();
+        assertThat(evento.getAccion()).isEqualTo("CSRF_RECHAZADO");
+        assertThat(evento.getResultado()).isEqualTo(ResultadoAuditoria.DENEGADO);
     }
 
     @Test
