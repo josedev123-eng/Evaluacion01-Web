@@ -8,6 +8,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderBy;
@@ -66,14 +67,14 @@ public class Usuario {
     @Column(name = "ultimo_acceso")
     private LocalDateTime ultimoAcceso;
 
-    // Rol principal del usuario (el que se muestra primero y define su área)
+    // Rol principal del usuario (el que se muestra primero y define su Ã¡rea)
     @ManyToOne
     @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
 
     // RF-USR-04: todos los roles asignados al usuario, incluido el principal.
-    // EAGER porque el usuario se guarda en la sesión HTTP y se usa fuera de una transacción.
-    @ManyToMany(fetch = FetchType.EAGER)
+    // EAGER porque el usuario se guarda en la sesiÃ³n HTTP y se usa fuera de una transacciÃ³n.
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "usuario_roles",
             joinColumns = @JoinColumn(name = "id_usuario"),
@@ -88,8 +89,8 @@ public class Usuario {
     @Column(name = "reset_token_expiry")
     private LocalDateTime resetTokenExpiry;
 
-    // Rol principal primero y luego el resto, sin repetir. Sirve también para usuarios
-    // antiguos que aún no tienen filas en usuario_roles.
+    // Rol principal primero y luego el resto, sin repetir. Sirve tambiÃ©n para usuarios
+    // antiguos que aÃºn no tienen filas en usuario_roles.
     public Set<Rol> getRolesAsignados() {
         Set<Rol> asignados = new LinkedHashSet<>();
         if (rol != null) {

@@ -49,7 +49,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return usuarioRepository.findAll();
     }
 
-    // RF-USR-05: los textos vacíos se tratan como "sin filtro"
+    // RF-USR-05: los textos vacÃƒÂ­os se tratan como "sin filtro"
     @Override
     public List<Usuario> buscar(String texto, String area, Integer idRol, Boolean estado) {
         String patron = (texto == null || texto.isBlank()) ? null : "%" + texto.trim().toLowerCase() + "%";
@@ -72,7 +72,7 @@ public class UsuarioServiceImpl implements UsuarioService {
             Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuario.getArea(), List.of());
             autorizacionService.validarAsignacionRoles(operador, null, roles);
             if (usuario.getContrasena() == null || usuario.getContrasena().isBlank()) {
-                throw new IllegalArgumentException("La contraseña es obligatoria para registrar un usuario.");
+                throw new IllegalArgumentException("La contraseÃƒÂ±a es obligatoria para registrar un usuario.");
             }
             validarContrasena(usuario.getContrasena());
             // No persistir id, estado, tokens ni asociaciones enviados fuera del formulario.
@@ -128,8 +128,8 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
     }
 
-    // RF-USR-03: activa o desactiva de forma explícita (no alterna), así un doble clic
-    // o un reenvío del formulario no revierte la acción.
+    // RF-USR-03: activa o desactiva de forma explÃƒÂ­cita (no alterna), asÃƒÂ­ un doble clic
+    // o un reenvÃƒÂ­o del formulario no revierte la acciÃƒÂ³n.
     @Override
     @Transactional
     public Usuario cambiarEstado(Long id, boolean activo, Usuario usuarioLogueado) {
@@ -143,7 +143,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 }
                 if (Boolean.TRUE.equals(usuario.getEstado()) && autorizacionService.tieneRolAdministrador(usuario)
                         && usuarioRepository.contarActivosConRol(AutorizacionService.ROL_ADMINISTRADOR) <= 1) {
-                    throw new IllegalStateException("No se puede desactivar al último administrador activo.");
+                    throw new IllegalStateException("No se puede desactivar al ÃƒÂºltimo administrador activo.");
                 }
             }
             boolean anterior = Boolean.TRUE.equals(usuario.getEstado());
@@ -159,8 +159,8 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     // RF-USR-04: el rol principal siempre forma parte de los roles asignados. Todos los
-    // roles deben pertenecer al área del usuario, igual que la regla del rol principal.
-    // Un rol inactivo no admite asignaciones nuevas: solo lo conserva quien ya lo tenía.
+    // roles deben pertenecer al ÃƒÂ¡rea del usuario, igual que la regla del rol principal.
+    // Un rol inactivo no admite asignaciones nuevas: solo lo conserva quien ya lo tenÃƒÂ­a.
     private Set<Rol> armarRoles(Rol principal, List<Integer> idsRolesAdicionales, String area,
                                 List<Integer> idsRolesYaAsignados) {
         validarArea(principal, area);
@@ -195,13 +195,13 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     private void validarRolAsignable(Rol rol, List<Integer> idsRolesYaAsignados) {
         if (!rol.isActivo() && !idsRolesYaAsignados.contains(rol.getIdRol())) {
-            throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' está inactivo y no se puede asignar.");
+            throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' estÃƒÂ¡ inactivo y no se puede asignar.");
         }
     }
 
     private void validarArea(Rol rol, String area) {
         if (area == null || rol.getArea() == null || !rol.getArea().equalsIgnoreCase(area.trim())) {
-            throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' no corresponde al área elegida.");
+            throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' no corresponde al ÃƒÂ¡rea elegida.");
         }
     }
 
@@ -212,21 +212,21 @@ public class UsuarioServiceImpl implements UsuarioService {
         usuario.setApellidos(obligatorio(usuario.getApellidos(), "apellidos", 100));
         usuario.setCorreo(obligatorio(usuario.getCorreo(), "correo", 100).toLowerCase());
         usuario.setUsuario(obligatorio(usuario.getUsuario(), "usuario", 50));
-        usuario.setArea(obligatorio(usuario.getArea(), "área", 100));
+        usuario.setArea(obligatorio(usuario.getArea(), "ÃƒÂ¡rea", 100));
         usuario.setDni(opcional(usuario.getDni()));
         usuario.setTelefono(opcional(usuario.getTelefono()));
 
         if (!CORREO.matcher(usuario.getCorreo()).matches()) {
-            throw new IllegalArgumentException("El correo no tiene un formato válido.");
+            throw new IllegalArgumentException("El correo no tiene un formato vÃƒÂ¡lido.");
         }
         if (!NOMBRE_USUARIO.matcher(usuario.getUsuario()).matches()) {
-            throw new IllegalArgumentException("El usuario debe tener de 3 a 50 caracteres: letras, números, punto, guion o guion bajo.");
+            throw new IllegalArgumentException("El usuario debe tener de 3 a 50 caracteres: letras, nÃƒÂºmeros, punto, guion o guion bajo.");
         }
         if (usuario.getDni() != null && !DNI.matcher(usuario.getDni()).matches()) {
-            throw new IllegalArgumentException("El DNI debe tener 8 dígitos.");
+            throw new IllegalArgumentException("El DNI debe tener 8 dÃƒÂ­gitos.");
         }
         if (usuario.getTelefono() != null && !TELEFONO.matcher(usuario.getTelefono()).matches()) {
-            throw new IllegalArgumentException("El teléfono solo puede tener dígitos, espacios y un + inicial.");
+            throw new IllegalArgumentException("El telÃƒÂ©fono solo puede tener dÃƒÂ­gitos, espacios y un + inicial.");
         }
 
         boolean usuarioRepetido = idExcluido == null
@@ -257,19 +257,19 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
         String limpio = valor.trim();
         if (limpio.length() > longitudMaxima) {
-            throw new IllegalArgumentException("El campo " + campo + " admite como máximo " + longitudMaxima + " caracteres.");
+            throw new IllegalArgumentException("El campo " + campo + " admite como mÃƒÂ¡ximo " + longitudMaxima + " caracteres.");
         }
         return limpio;
     }
 
-    // DNI y teléfono vacíos se guardan como NULL: dni es UNIQUE y dos "" chocarían entre sí.
+    // DNI y telÃƒÂ©fono vacÃƒÂ­os se guardan como NULL: dni es UNIQUE y dos "" chocarÃƒÂ­an entre sÃƒÂ­.
     private String opcional(String valor) {
         return (valor == null || valor.isBlank()) ? null : valor.trim();
     }
 
     private void validarContrasena(String contrasena) {
         if (contrasena.length() < LONGITUD_MINIMA_CONTRASENA) {
-            throw new IllegalArgumentException("La contraseña debe tener al menos " + LONGITUD_MINIMA_CONTRASENA + " caracteres.");
+            throw new IllegalArgumentException("La contraseÃƒÂ±a debe tener al menos " + LONGITUD_MINIMA_CONTRASENA + " caracteres.");
         }
     }
 
@@ -277,7 +277,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         if (Boolean.TRUE.equals(existente.getEstado()) && autorizacionService.tieneRolAdministrador(existente)
                 && nuevosRoles.stream().noneMatch(autorizacionService::esRolAdministrador)
                 && usuarioRepository.contarActivosConRol(AutorizacionService.ROL_ADMINISTRADOR) <= 1) {
-            throw new IllegalStateException("No se puede quitar el rol al último administrador activo.");
+            throw new IllegalStateException("No se puede quitar el rol al ÃƒÂºltimo administrador activo.");
         }
     }
 
@@ -309,8 +309,56 @@ public class UsuarioServiceImpl implements UsuarioService {
         List<Integer> antes = idsRoles(anterior.getRolesAsignados());
         List<Integer> despues = idsRoles(nuevosRoles);
         if (!antes.equals(despues)) campos.add("roles");
-        // Solo nombres de campos e IDs: no duplicar DNI, correo, teléfono ni claves en el historial.
+        // Solo nombres de campos e IDs: no duplicar DNI, correo, telÃƒÂ©fono ni claves en el historial.
         return "Campos modificados: " + campos + "; rol principal: " + anterior.getRol().getIdRol()
                 + " -> " + principal.getIdRol() + "; roles: " + antes + " -> " + despues;
+    }
+    @Override
+    @Transactional
+    public void asignarRolAdicional(Long usuarioId, Long rolId) {
+        try {
+            Usuario usuario = obtenerPorId(usuarioId);
+            Rol rol = rolRepository.findById(rolId.intValue())
+                    .orElseThrow(() -> new IllegalArgumentException("Rol no encontrado: " + rolId));
+            if (usuario.getRoles().stream().anyMatch(r -> r.getIdRol().equals(rol.getIdRol()))) {
+                return;
+            }
+            if (!rol.isActivo()) {
+                throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' est\u00E1 inactivo y no se puede asignar.");
+            }
+            if (!usuario.getArea().equalsIgnoreCase(rol.getArea())) {
+                throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' no corresponde al \u00E1rea elegida.");
+            }
+            usuario.getRoles().add(rol);
+            usuarioRepository.saveAndFlush(usuario);
+            auditoriaService.registrarExito(null, ModuloAuditoria.USUARIOS, "ASIGNAR_ROL_ADICIONAL", "Usuario", usuarioId,
+                    "Rol adicional asignado: " + rol.getNombre() + " (id=" + rolId + ")");
+        } catch (RuntimeException e) {
+            auditoriaService.registrarFalloOperacion(null, ModuloAuditoria.USUARIOS, "ASIGNAR_ROL_ADICIONAL", "Usuario", usuarioId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public void removerRolAdicional(Long usuarioId, Long rolId) {
+        try {
+            Usuario usuario = obtenerPorId(usuarioId);
+            Rol rol = rolRepository.findById(rolId.intValue())
+                    .orElseThrow(() -> new IllegalArgumentException("Rol no encontrado: " + rolId));
+            if (rol.getIdRol().equals(usuario.getRol().getIdRol())) {
+                throw new IllegalArgumentException("No se puede remover el rol principal del usuario.");
+            }
+            boolean removed = usuario.getRoles().removeIf(r -> r.getIdRol().equals(rol.getIdRol()));
+            if (!removed) {
+                return;
+            }
+            usuarioRepository.saveAndFlush(usuario);
+            auditoriaService.registrarExito(null, ModuloAuditoria.USUARIOS, "REMOVER_ROL_ADICIONAL", "Usuario", usuarioId,
+                    "Rol adicional removido: " + rol.getNombre() + " (id=" + rolId + ")");
+        } catch (RuntimeException e) {
+            auditoriaService.registrarFalloOperacion(null, ModuloAuditoria.USUARIOS, "REMOVER_ROL_ADICIONAL", "Usuario", usuarioId, e);
+            throw e;
+        }
     }
 }

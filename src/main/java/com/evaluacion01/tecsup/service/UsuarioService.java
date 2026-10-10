@@ -10,4 +10,6 @@ public interface UsuarioService {
     Usuario registrarUsuario(Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador);
     Usuario actualizarUsuario(Long id, Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador);
     Usuario cambiarEstado(Long id, boolean activo, Usuario usuarioLogueado);
+    void asignarRolAdicional(Long usuarioId, Long rolId);
+    void removerRolAdicional(Long usuarioId, Long rolId);
 }
