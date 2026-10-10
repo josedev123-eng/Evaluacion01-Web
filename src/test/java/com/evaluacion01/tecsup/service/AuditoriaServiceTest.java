@@ -1,108 +1,131 @@
 package com.evaluacion01.tecsup.service;
 
 import com.evaluacion01.tecsup.audit.AuditoriaContext;
+import com.evaluacion01.tecsup.audit.ModuloAuditoria;
+import com.evaluacion01.tecsup.audit.ResultadoAuditoria;
 import com.evaluacion01.tecsup.entity.AuditoriaLog;
+import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.repository.AuditoriaLogRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuditoriaServiceTest {
 
-    @Mock
-    private AuditoriaLogRepository auditoriaLogRepository;
+    @Mock private AuditoriaLogRepository repository;
+    @Mock private AuditoriaFallosService fallos;
+    private AuditoriaService service;
 
-    @InjectMocks
-    private AuditoriaService auditoriaService;
+    @BeforeEach
+    void preparar() {
+        service = new AuditoriaService(repository, fallos,
+                Clock.fixed(Instant.parse("2026-10-09T10:00:00Z"), ZoneOffset.UTC));
+    }
 
     @AfterEach
     void limpiarContexto() {
-        AuditoriaContext.clear();
+        AuditoriaContext.limpiar();
     }
 
     @Test
-    void debeGuardarLaOperacionCriticaConLosCamposEsperados() {
-        auditoriaService.registrar("jdoe", AuditoriaService.MODULO_USUARIOS, "CREAR_USUARIO",
-                "Usuario", 10L, "Usuario creado: Juan Perez", AuditoriaService.RESULTADO_EXITO);
+    void capturaIdentidadFechaUtcYMetadatosSinDependerDeLaEntidadDespues() {
+        Usuario operador = new Usuario();
+        operador.setIdUsuario(7L);
+        operador.setUsuario(" operador ");
+        AuditoriaContext.establecer(new AuditoriaContext.DatosPeticion("127.0.0.1", "POST", "/usuarios/guardar"));
+
+        service.registrarExito(operador, ModuloAuditoria.USUARIOS, "CREAR_USUARIO", "Usuario", 9L, "Datos permitidos");
+        operador.setUsuario("otro");
+
+        AuditoriaLog evento = eventoExitoso();
+        assertThat(evento.getFechaHora()).isEqualTo(LocalDateTime.of(2026, 10, 9, 10, 0));
+        assertThat(evento.getIdUsuarioEjecutor()).isEqualTo(7L);
+        assertThat(evento.getUsuarioEjecutor()).isEqualTo("operador");
+        assertThat(evento.getIdEntidad()).isEqualTo(9L);
+        assertThat(evento.getResultado()).isEqualTo(ResultadoAuditoria.EXITO);
+        assertThat(evento.getIp()).isEqualTo("127.0.0.1");
+        assertThat(evento.getMetodoHttp()).isEqualTo("POST");
+        assertThat(evento.getRuta()).isEqualTo("/usuarios/guardar");
+    }
+
+    @Test
+    void permiteOperacionesSinHttpYUsaEjecutorAnonimo() {
+        service.registrarExito(null, ModuloAuditoria.ROLES, "CREAR_ROL", "Rol", 3, null);
+
+        AuditoriaLog evento = eventoExitoso();
+        assertThat(evento.getUsuarioEjecutor()).isEqualTo("ANONIMO");
+        assertThat(evento.getIdUsuarioEjecutor()).isNull();
+        assertThat(evento.getIdEntidad()).isEqualTo(3L);
+        assertThat(evento.getIp()).isNull();
+        assertThat(evento.getRuta()).isNull();
+    }
+
+    @Test
+    void limitaCamposYEliminaCaracteresDeControl() {
+        Usuario operador = new Usuario();
+        operador.setUsuario("u".repeat(150));
+        AuditoriaContext.establecer(new AuditoriaContext.DatosPeticion("i".repeat(100), "m".repeat(30), "r".repeat(300)));
+
+        service.registrarExito(operador, ModuloAuditoria.USUARIOS, "a".repeat(80), "e".repeat(80), null,
+                "inicio\r\n" + "d".repeat(1200));
+
+        AuditoriaLog evento = eventoExitoso();
+        assertThat(evento.getUsuarioEjecutor()).hasSize(100);
+        assertThat(evento.getAccion()).hasSize(50);
+        assertThat(evento.getEntidad()).hasSize(50);
+        assertThat(evento.getDetalle()).hasSize(1000).doesNotContain("\r", "\n");
+        assertThat(evento.getIp()).hasSize(45);
+        assertThat(evento.getMetodoHttp()).hasSize(10);
+        assertThat(evento.getRuta()).hasSize(255);
+    }
+
+    @Test
+    void losIntentosFallidosSeEnvianAlEscritorIndependiente() {
+        service.registrarFallo(null, " correo@pruebas.local ", ModuloAuditoria.AUTENTICACION,
+                "LOGIN", "Usuario", null, "CREDENCIALES_INVALIDAS", false);
 
         ArgumentCaptor<AuditoriaLog> captor = ArgumentCaptor.forClass(AuditoriaLog.class);
-        verify(auditoriaLogRepository).save(captor.capture());
-
-        AuditoriaLog registro = captor.getValue();
-        assertThat(registro.getFechaHora()).isNotNull();
-        assertThat(registro.getUsuarioEjecutor()).isEqualTo("jdoe");
-        assertThat(registro.getModulo()).isEqualTo("USUARIOS");
-        assertThat(registro.getAccion()).isEqualTo("CREAR_USUARIO");
-        assertThat(registro.getEntidad()).isEqualTo("Usuario");
-        assertThat(registro.getIdEntidad()).isEqualTo(10L);
-        assertThat(registro.getDetalle()).isEqualTo("Usuario creado: Juan Perez");
-        assertThat(registro.getResultado()).isEqualTo("EXITO");
+        verify(fallos).guardar(captor.capture());
+        assertThat(captor.getValue().getUsuarioEjecutor()).isEqualTo("correo@pruebas.local");
+        assertThat(captor.getValue().getResultado()).isEqualTo(ResultadoAuditoria.FALLO);
+        verifyNoInteractions(repository);
     }
 
     @Test
-    void debeUsarElUsuarioDeLaSesionCuandoNoSeIndiqueEjecutor() {
-        AuditoriaContext.set("edu", "10.0.0.7");
-
-        auditoriaService.registrar(AuditoriaService.MODULO_ROLES, "EDITAR_ROL", "Rol", 2L, "nombre: 'A' -> 'B'");
+    void distingueAccesosDenegadosDeErroresDeValidacion() {
+        service.registrarFallo(null, null, ModuloAuditoria.ROLES, "EDITAR_ROL", "Rol", 2, "SIN_PERMISO", true);
 
         ArgumentCaptor<AuditoriaLog> captor = ArgumentCaptor.forClass(AuditoriaLog.class);
-        verify(auditoriaLogRepository).save(captor.capture());
-        assertThat(captor.getValue().getUsuarioEjecutor()).isEqualTo("edu");
-        assertThat(captor.getValue().getIp()).isEqualTo("10.0.0.7");
-        assertThat(captor.getValue().getResultado()).isEqualTo("EXITO");
+        verify(fallos).guardar(captor.capture());
+        assertThat(captor.getValue().getResultado()).isEqualTo(ResultadoAuditoria.DENEGADO);
     }
 
     @Test
-    void debeRegistrarComoSistemaCuandoNoHaySesion() {
-        auditoriaService.registrar(AuditoriaService.MODULO_AUTENTICACION, "LOGIN_FALLIDO",
-                "Usuario", null, "Sin usuario en sesión");
+    void unFalloDelRegistroNoSustituyeElRechazoOriginal() {
+        doThrow(new IllegalStateException("Base no disponible")).when(fallos).guardar(any());
 
+        assertThatCode(() -> service.registrarFallo(null, null, ModuloAuditoria.AUTENTICACION,
+                "LOGIN", "Usuario", null, "CREDENCIALES_INVALIDAS", false)).doesNotThrowAnyException();
+    }
+
+    private AuditoriaLog eventoExitoso() {
         ArgumentCaptor<AuditoriaLog> captor = ArgumentCaptor.forClass(AuditoriaLog.class);
-        verify(auditoriaLogRepository).save(captor.capture());
-        assertThat(captor.getValue().getUsuarioEjecutor()).isEqualTo("sistema");
-        assertThat(captor.getValue().getIp()).isNull();
-    }
-
-    @Test
-    void debeMarcarResultadoFallidoEnIntentosRechazados() {
-        auditoriaService.registrarFallo("jdoe", AuditoriaService.MODULO_AUTENTICACION, "LOGIN_FALLIDO",
-                "Usuario", null, "Contraseña incorrecta");
-
-        ArgumentCaptor<AuditoriaLog> captor = ArgumentCaptor.forClass(AuditoriaLog.class);
-        verify(auditoriaLogRepository).save(captor.capture());
-        assertThat(captor.getValue().getResultado()).isEqualTo("FALLO");
-        assertThat(captor.getValue().getDetalle()).isEqualTo("Contraseña incorrecta");
-    }
-
-    @Test
-    void noDebePropagarErroresCuandoFallaElRegistro() {
-        when(auditoriaLogRepository.save(any(AuditoriaLog.class))).thenThrow(new RuntimeException("BD caída"));
-
-        assertThatCode(() -> auditoriaService.registrar("jdoe", AuditoriaService.MODULO_USUARIOS,
-                "CREAR_USUARIO", "Usuario", 1L, "Detalle", AuditoriaService.RESULTADO_EXITO))
-                .doesNotThrowAnyException();
-    }
-
-    @Test
-    void debeAcortarElDetalleQueExcedaElTamanoPermitido() {
-        String detalleLargo = "x".repeat(1500);
-
-        auditoriaService.registrar("jdoe", AuditoriaService.MODULO_USUARIOS, "EDITAR_USUARIO",
-                "Usuario", 1L, detalleLargo, AuditoriaService.RESULTADO_EXITO);
-
-        ArgumentCaptor<AuditoriaLog> captor = ArgumentCaptor.forClass(AuditoriaLog.class);
-        verify(auditoriaLogRepository).save(captor.capture());
-        assertThat(captor.getValue().getDetalle()).hasSize(1000);
+        verify(repository).save(captor.capture());
+        return captor.getValue();
     }
 }

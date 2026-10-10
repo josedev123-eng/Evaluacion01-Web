@@ -1,10 +1,8 @@
 package com.evaluacion01.tecsup.service;
 
-import java.util.ArrayList;
+import com.evaluacion01.tecsup.audit.ModuloAuditoria;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -13,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.evaluacion01.tecsup.entity.Permiso;
 import com.evaluacion01.tecsup.entity.Rol;
+import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.repository.PermisoRepository;
 import com.evaluacion01.tecsup.repository.RolRepository;
 
@@ -22,12 +21,27 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RolService {
 
+    // Roles que el sistema necesita siempre; schema.sql los crea si faltan.
+    public static final List<String> ROLES_BASE = List.of("Administrador", "Médico", "Recepcionista");
+
     private final RolRepository rolRepository;
     private final PermisoRepository permisoRepository;
+    private final AutorizacionService autorizacionService;
     private final AuditoriaService auditoriaService;
 
     public List<Rol> listar() {
         return rolRepository.findAll();
+    }
+
+    public List<Rol> listarActivos() {
+        return rolRepository.findByEstadoTrue();
+    }
+
+    // Devuelve los roles base que no están en el catálogo (lista vacía si están todos).
+    public List<String> rolesBaseFaltantes() {
+        return ROLES_BASE.stream()
+                .filter(nombre -> !rolRepository.existsByNombreIgnoreCase(nombre))
+                .toList();
     }
 
     public Rol obtenerPorId(Integer idRol) {
@@ -47,117 +61,98 @@ public class RolService {
     }
 
     @Transactional
-    public Rol guardar(Rol rol) {
-        if (rol.getNombre() == null || rol.getNombre().isBlank()) {
-            throw new IllegalArgumentException("El nombre del rol es obligatorio");
-        }
-        rol.setNombre(rol.getNombre().trim());
-        if (rol.getArea() == null || rol.getArea().isBlank()) {
-            throw new IllegalArgumentException("El área del rol es obligatoria");
-        }
-        rol.setArea(rol.getArea().trim());
-
-        rolRepository.findByNombreIgnoreCase(rol.getNombre()).ifPresent(existente -> {
-            if (!existente.getIdRol().equals(rol.getIdRol())) {
-                throw new IllegalArgumentException("Ya existe un rol con el nombre '" + rol.getNombre() + "'");
+    public Rol guardar(Rol rol, Usuario operador) {
+        String accion = rol.getIdRol() == null ? "CREAR_ROL" : "EDITAR_ROL";
+        try {
+            autorizacionService.exigirAdministrador(operador);
+            if (rol.getNombre() == null || rol.getNombre().isBlank()) {
+                throw new IllegalArgumentException("El nombre del rol es obligatorio");
             }
-        });
+            rol.setNombre(rol.getNombre().trim());
+            if (rol.getArea() == null || rol.getArea().isBlank()) {
+                throw new IllegalArgumentException("El área del rol es obligatoria");
+            }
+            rol.setArea(rol.getArea().trim());
+            rolRepository.findByNombreIgnoreCase(rol.getNombre()).ifPresent(existente -> {
+                if (!existente.getIdRol().equals(rol.getIdRol())) {
+                    throw new IllegalArgumentException("Ya existe un rol con el nombre '" + rol.getNombre() + "'");
+                }
+            });
 
-        if (rol.getIdRol() != null) {
-            Rol actual = obtenerPorId(rol.getIdRol());
-            Map<String, String> antes = resumen(actual);
-            actual.setNombre(rol.getNombre());
-            actual.setDescripcion(rol.getDescripcion());
-            actual.setArea(rol.getArea());
-            Rol guardado = rolRepository.save(actual);
-            // RF-AUD-01: modificación de rol.
-            auditoriaService.registrar(AuditoriaService.MODULO_ROLES, "EDITAR_ROL", "Rol",
-                    idLargo(guardado.getIdRol()), diferenciar(antes, resumen(guardado)));
+            Rol destino;
+            String detalle;
+            if (rol.getIdRol() != null) {
+                destino = obtenerPorId(rol.getIdRol());
+                if (autorizacionService.esRolAdministrador(destino) && !autorizacionService.esRolAdministrador(rol)) {
+                    throw new IllegalArgumentException("El rol Administrador es reservado y no se puede renombrar.");
+                }
+                List<String> campos = new java.util.ArrayList<>();
+                if (!Objects.equals(destino.getNombre(), rol.getNombre())) campos.add("nombre");
+                if (!Objects.equals(destino.getDescripcion(), rol.getDescripcion())) campos.add("descripcion");
+                if (!Objects.equals(destino.getArea(), rol.getArea())) campos.add("area");
+                detalle = "Campos modificados: " + campos;
+            } else {
+                destino = new Rol();
+                detalle = "Rol creado sin permisos iniciales";
+            }
+            destino.setNombre(rol.getNombre());
+            destino.setDescripcion(rol.getDescripcion());
+            destino.setArea(rol.getArea());
+            Rol guardado = rolRepository.saveAndFlush(destino);
+            auditoriaService.registrarExito(operador, ModuloAuditoria.ROLES, accion, "Rol", guardado.getIdRol(), detalle);
             return guardado;
+        } catch (RuntimeException e) {
+            auditoriaService.registrarFalloOperacion(operador, ModuloAuditoria.ROLES, accion, "Rol", rol.getIdRol(), e);
+            throw e;
         }
+    }
 
-        Rol guardado = rolRepository.save(rol);
-        // RF-AUD-01: alta de rol.
-        auditoriaService.registrar(AuditoriaService.MODULO_ROLES, "CREAR_ROL", "Rol",
-                idLargo(guardado.getIdRol()),
-                "Rol creado: " + guardado.getNombre() + " (área " + guardado.getArea() + ")");
-        return guardado;
+    // Activa o desactiva de forma explícita (no alterna), igual que el estado de usuarios.
+    // El rol Administrador nunca se desactiva: así siempre queda quien administre el sistema.
+    @Transactional
+    public Rol cambiarEstado(Integer idRol, boolean activo, Usuario operador) {
+        String accion = activo ? "ACTIVAR_ROL" : "DESACTIVAR_ROL";
+        try {
+            autorizacionService.exigirAdministrador(operador);
+            Rol rol = obtenerPorId(idRol);
+            if (!activo && autorizacionService.esRolAdministrador(rol)) {
+                throw new IllegalStateException("El rol Administrador es reservado y no se puede desactivar.");
+            }
+            boolean anterior = rol.isActivo();
+            rol.setEstado(activo);
+            Rol guardado = rolRepository.saveAndFlush(rol);
+            auditoriaService.registrarExito(operador, ModuloAuditoria.ROLES, accion, "Rol", idRol,
+                    "Estado: " + anterior + " -> " + activo);
+            return guardado;
+        } catch (RuntimeException e) {
+            auditoriaService.registrarFalloOperacion(operador, ModuloAuditoria.ROLES, accion, "Rol", idRol, e);
+            throw e;
+        }
     }
 
     @Transactional
-    public Rol asignarPermisos(Integer idRol, List<Integer> idsPermisos) {
-        Rol rol = obtenerPorId(idRol);
-
-        Set<Permiso> anteriores = new HashSet<>(rol.getPermisos());
-
-        Set<Permiso> permisos = (idsPermisos == null || idsPermisos.isEmpty())
-                ? new HashSet<>()
-                : new HashSet<>(permisoRepository.findAllById(idsPermisos));
-
-        rol.setPermisos(permisos);
-        Rol guardado = rolRepository.save(rol);
-
-        // RF-AUD-01: alta y baja de permisos sobre un rol.
-        auditoriaService.registrar(AuditoriaService.MODULO_PERMISOS, "CAMBIAR_PERMISOS_ROL", "Rol",
-                idLargo(idRol), detalleCambiosDePermisos(anteriores, permisos));
-
-        return guardado;
-    }
-
-    private static Long idLargo(Integer id) {
-        return id == null ? null : id.longValue();
-    }
-
-    private Map<String, String> resumen(Rol rol) {
-        Map<String, String> resumen = new LinkedHashMap<>();
-        resumen.put("nombre", rol.getNombre());
-        resumen.put("descripcion", rol.getDescripcion());
-        resumen.put("area", rol.getArea());
-        return resumen;
-    }
-
-    private String diferenciar(Map<String, String> antes, Map<String, String> despues) {
-        List<String> cambios = new ArrayList<>();
-        for (String campo : despues.keySet()) {
-            String valorAnterior = antes.get(campo);
-            String valorNuevo = despues.get(campo);
-            if (!Objects.equals(valorAnterior, valorNuevo)) {
-                cambios.add(campo + ": '" + valorAnterior + "' -> '" + valorNuevo + "'");
+    public Rol asignarPermisos(Integer idRol, List<Integer> idsPermisos, Usuario operador) {
+        try {
+            autorizacionService.exigirAdministrador(operador);
+            Rol rol = obtenerPorId(idRol);
+            if (idsPermisos != null && idsPermisos.stream().anyMatch(Objects::isNull)) {
+                throw new IllegalArgumentException("Uno o más permisos seleccionados no existen.");
             }
-        }
-        return cambios.isEmpty() ? "Sin cambios de campos" : String.join("; ", cambios);
-    }
-
-    private String detalleCambiosDePermisos(Set<Permiso> anteriores, Set<Permiso> actuales) {
-        List<String> agregados = actuales.stream()
-                .filter(permiso -> anteriores.stream().noneMatch(anterior -> Objects.equals(anterior.getIdPermiso(), permiso.getIdPermiso())))
-                .map(RolService::nombreCompleto)
-                .sorted()
-                .toList();
-
-        List<String> quitados = anteriores.stream()
-                .filter(permiso -> actuales.stream().noneMatch(actual -> Objects.equals(actual.getIdPermiso(), permiso.getIdPermiso())))
-                .map(RolService::nombreCompleto)
-                .sorted()
-                .toList();
-
-        if (agregados.isEmpty() && quitados.isEmpty()) {
-            return "Sin cambios en los permisos (" + actuales.size() + " asignados)";
-        }
-        StringBuilder detalle = new StringBuilder();
-        if (!agregados.isEmpty()) {
-            detalle.append("Permisos agregados: ").append(String.join(", ", agregados));
-        }
-        if (!quitados.isEmpty()) {
-            if (detalle.length() > 0) {
-                detalle.append("; ");
+            Set<Permiso> permisos = (idsPermisos == null || idsPermisos.isEmpty())
+                    ? new HashSet<>() : new HashSet<>(permisoRepository.findAllById(idsPermisos));
+            if (idsPermisos != null && permisos.size() != new HashSet<>(idsPermisos).size()) {
+                throw new IllegalArgumentException("Uno o más permisos seleccionados no existen.");
             }
-            detalle.append("Permisos quitados: ").append(String.join(", ", quitados));
+            List<Integer> anteriores = rol.getPermisos().stream().map(Permiso::getIdPermiso).sorted().toList();
+            List<Integer> nuevos = permisos.stream().map(Permiso::getIdPermiso).sorted().toList();
+            rol.setPermisos(permisos);
+            Rol guardado = rolRepository.saveAndFlush(rol);
+            auditoriaService.registrarExito(operador, ModuloAuditoria.PERMISOS, "ASIGNAR_PERMISOS", "Rol", idRol,
+                    "Permisos: " + anteriores + " -> " + nuevos);
+            return guardado;
+        } catch (RuntimeException e) {
+            auditoriaService.registrarFalloOperacion(operador, ModuloAuditoria.PERMISOS, "ASIGNAR_PERMISOS", "Rol", idRol, e);
+            throw e;
         }
-        return detalle.toString();
-    }
-
-    private static String nombreCompleto(Permiso permiso) {
-        return permiso.getModulo() + "." + permiso.getNombre();
     }
 }

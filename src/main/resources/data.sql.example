@@ -2,6 +2,7 @@ INSERT IGNORE INTO roles (nombre, descripcion, area) VALUES
     ('Administrador', 'Gestión total del sistema, usuarios, roles y permisos', 'Administración'),
     ('Coordinador administrativo', 'Coordinación de procesos administrativos', 'Administración'),
     ('Auditor administrativo', 'Consulta y supervisión de la configuración administrativa', 'Administración'),
+    ('Médico', 'Historias clínicas, consultas y diagnósticos', 'Medicina'),
     ('Médico general', 'Atención médica general', 'Medicina'),
     ('Médico especialista', 'Atención médica especializada', 'Medicina'),
     ('Enfermero', 'Atención y cuidado de pacientes', 'Enfermería'),
@@ -46,3 +47,7 @@ SELECT 'Administrador', 'Sistema', 'admin@hospital.com', 'admin',
 FROM roles r
 WHERE r.nombre = 'Administrador'
 LIMIT 1;
+
+-- RF-USR-04: el rol principal de cada usuario también figura en usuario_roles
+INSERT IGNORE INTO usuario_roles (id_usuario, id_rol)
+SELECT id_usuario, id_rol FROM usuarios;

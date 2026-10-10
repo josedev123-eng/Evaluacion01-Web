@@ -1,86 +1,78 @@
 package com.evaluacion01.tecsup.service;
 
 import com.evaluacion01.tecsup.audit.AuditoriaContext;
+import com.evaluacion01.tecsup.audit.ModuloAuditoria;
+import com.evaluacion01.tecsup.audit.ResultadoAuditoria;
 import com.evaluacion01.tecsup.entity.AuditoriaLog;
+import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.repository.AuditoriaLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Objects;
 
-// RF-AUD-01: servicio base de auditoría. Nunca lanza excepciones hacia afuera:
-// si el registro de log falla, la operación crítica continúa con normalidad.
 @Service
 @RequiredArgsConstructor
 public class AuditoriaService {
 
-    public static final String MODULO_AUTENTICACION = "AUTENTICACION";
-    public static final String MODULO_USUARIOS = "USUARIOS";
-    public static final String MODULO_ROLES = "ROLES";
-    public static final String MODULO_PERMISOS = "PERMISOS";
-
-    public static final String RESULTADO_EXITO = "EXITO";
-    public static final String RESULTADO_FALLO = "FALLO";
-
     private static final Logger LOGGER = LoggerFactory.getLogger(AuditoriaService.class);
 
-    private final AuditoriaLogRepository auditoriaLogRepository;
+    private final AuditoriaLogRepository repository;
+    private final AuditoriaFallosService fallosService;
+    private final Clock auditoriaClock;
 
-    // Registra usando el usuario de sesión capturado por AuditoriaContext.
-    public void registrar(String modulo, String accion, String entidad, Long idEntidad, String detalle) {
-        registrar(AuditoriaContext.getUsuario(), modulo, accion, entidad, idEntidad, detalle, RESULTADO_EXITO);
+    // El éxito y la modificación crítica se confirman o se revierten juntos.
+    @Transactional
+    public void registrarExito(Usuario operador, ModuloAuditoria modulo, String accion,
+                              String entidad, Number idEntidad, String detalle) {
+        repository.save(crear(operador, null, modulo, accion, entidad, idEntidad, detalle, ResultadoAuditoria.EXITO));
     }
 
-    public void registrarFallo(String usuarioEjecutor, String modulo, String accion, String entidad,
-                               Long idEntidad, String detalle) {
-        registrar(usuarioEjecutor, modulo, accion, entidad, idEntidad, detalle, RESULTADO_FALLO);
-    }
-
-    public void registrar(String usuarioEjecutor, String modulo, String accion, String entidad,
-                          Long idEntidad, String detalle, String resultado) {
+    public void registrarFallo(Usuario operador, String identificadorIntentado, ModuloAuditoria modulo,
+                              String accion, String entidad, Number idEntidad, String detalle, boolean denegado) {
+        AuditoriaLog evento = crear(operador, identificadorIntentado, modulo, accion, entidad, idEntidad, detalle,
+                denegado ? ResultadoAuditoria.DENEGADO : ResultadoAuditoria.FALLO);
         try {
-            AuditoriaLog registro = new AuditoriaLog();
-            registro.setFechaHora(LocalDateTime.now());
-            registro.setUsuarioEjecutor(acortar(usuarioEjecutor == null ? AuditoriaContext.getUsuario() : usuarioEjecutor, 50));
-            registro.setModulo(modulo);
-            registro.setAccion(accion);
-            registro.setEntidad(entidad);
-            registro.setIdEntidad(idEntidad);
-            registro.setDetalle(acortar(detalle, 1000));
-            registro.setIp(AuditoriaContext.getIp());
-            registro.setResultado(resultado);
-            auditoriaLogRepository.save(registro);
-        } catch (Exception e) {
-            LOGGER.error("No se pudo registrar la auditoría [{}][{}]: {}", modulo, accion, e.getMessage());
+            fallosService.guardar(evento);
+        } catch (RuntimeException e) {
+            // No sustituir el error original ni imprimir parámetros SQL o datos sensibles.
+            LOGGER.error("No se pudo guardar el intento de auditoría [{}][{}]", modulo, accion);
         }
     }
 
-    public List<AuditoriaLog> listar() {
-        return listarFiltrado(null, null);
+    public void registrarFalloOperacion(Usuario operador, ModuloAuditoria modulo, String accion,
+                                       String entidad, Number idEntidad, RuntimeException causa) {
+        boolean denegado = causa instanceof AccessDeniedException;
+        registrarFallo(operador, null, modulo, accion, entidad, idEntidad,
+                denegado ? "SIN_PERMISO" : "OPERACION_RECHAZADA", denegado);
     }
 
-    // Consulta para la pantalla de auditoría: acepta filtro por módulo y/o por usuario.
-    public List<AuditoriaLog> listarFiltrado(String modulo, String usuarioEjecutor) {
-        if (modulo != null && usuarioEjecutor != null) {
-            return auditoriaLogRepository.findByModuloAndUsuarioEjecutorOrderByFechaHoraDesc(modulo, usuarioEjecutor);
+    private AuditoriaLog crear(Usuario operador, String identificadorIntentado, ModuloAuditoria modulo,
+                               String accion, String entidad, Number idEntidad, String detalle,
+                               ResultadoAuditoria resultado) {
+        String ejecutor = operador == null ? identificadorIntentado : operador.getUsuario();
+        if (ejecutor == null || ejecutor.isBlank()) {
+            ejecutor = "ANONIMO";
         }
-        if (modulo != null) {
-            return auditoriaLogRepository.findByModuloOrderByFechaHoraDesc(modulo);
-        }
-        if (usuarioEjecutor != null) {
-            return auditoriaLogRepository.findByUsuarioEjecutorOrderByFechaHoraDesc(usuarioEjecutor);
-        }
-        return auditoriaLogRepository.findAllByOrderByFechaHoraDesc();
+        AuditoriaContext.DatosPeticion peticion = AuditoriaContext.obtener();
+        return new AuditoriaLog(LocalDateTime.now(auditoriaClock),
+                operador == null ? null : operador.getIdUsuario(), limpiar(ejecutor, 100),
+                Objects.requireNonNull(modulo), limpiar(Objects.requireNonNull(accion), 50),
+                limpiar(entidad, 50), idEntidad == null ? null : idEntidad.longValue(), limpiar(detalle, 1000),
+                limpiar(peticion.ip(), 45), limpiar(peticion.metodo(), 10), limpiar(peticion.ruta(), 255), resultado);
     }
 
-    private String acortar(String valor, int maximo) {
+    private String limpiar(String valor, int maximo) {
         if (valor == null) {
             return null;
         }
-        String limpio = valor.trim();
+        String limpio = valor.replaceAll("[\\p{Cntrl}]", " ").trim();
         return limpio.length() > maximo ? limpio.substring(0, maximo) : limpio;
     }
 }
