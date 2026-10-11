@@ -57,7 +57,7 @@ public class RolService {
     }
 
     public List<Permiso> listarPermisos() {
-        return permisoRepository.findAll();
+        return permisoRepository.findAllByOrderByModuloAscNombreAsc();
     }
 
     @Transactional
