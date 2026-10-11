@@ -88,3 +88,28 @@ CREATE TABLE IF NOT EXISTS auditoria_logs (
     INDEX idx_auditoria_modulo_fecha (modulo, fecha_hora),
     INDEX idx_auditoria_usuario_fecha (usuario_ejecutor, fecha_hora)
 );
+
+-- Extensión clínica: los pacientes no son cuentas de acceso.
+CREATE TABLE IF NOT EXISTS pacientes (
+    id_paciente BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nombres VARCHAR(100) NOT NULL,
+    apellidos VARCHAR(100) NOT NULL,
+    dni VARCHAR(8) NOT NULL UNIQUE,
+    fecha_nacimiento DATE NOT NULL,
+    telefono VARCHAR(20)
+);
+
+-- El servidor determina profesional y fecha. No se elimina historia en cascada.
+CREATE TABLE IF NOT EXISTS atenciones (
+    id_atencion BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_paciente BIGINT NOT NULL,
+    id_medico BIGINT NOT NULL,
+    fecha_hora DATETIME(6) NOT NULL,
+    motivo VARCHAR(250) NOT NULL,
+    diagnostico VARCHAR(2000) NOT NULL,
+    indicaciones VARCHAR(2000),
+    CONSTRAINT fk_atencion_paciente FOREIGN KEY (id_paciente) REFERENCES pacientes (id_paciente),
+    CONSTRAINT fk_atencion_medico FOREIGN KEY (id_medico) REFERENCES usuarios (id_usuario),
+    INDEX idx_atencion_paciente_fecha (id_paciente, fecha_hora, id_atencion),
+    INDEX idx_atencion_medico_fecha (id_medico, fecha_hora, id_atencion)
+);
