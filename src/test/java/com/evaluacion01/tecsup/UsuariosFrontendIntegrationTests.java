@@ -107,15 +107,24 @@ class UsuariosFrontendIntegrationTests {
 
     @Test
     void editarLaPropiaCuentaBloqueaRolesYConservaCamposEnElPost() throws Exception {
+        assertThat(pagina("/usuarios/editar/" + editor.getIdUsuario(), editor).select("#formUsuario .rol-adicional")).isEmpty();
+        editor.getRoles().add(principal);
+        usuarios.flush();
         Document vista = pagina("/usuarios/editar/" + editor.getIdUsuario(), editor);
         assertThat(vista.selectFirst("#formUsuario").attr("data-roles-bloqueados")).isEqualTo("true");
         assertThat(vista.selectFirst("select[name='rol.idRol']").hasAttr("disabled")).isTrue();
         assertThat(vista.selectFirst("select[name=area]").hasAttr("disabled")).isTrue();
         assertThat(vista.selectFirst("input[type=hidden][name='rol.idRol']").val()).isEqualTo(editor.getRol().getIdRol().toString());
+        assertThat(vista.select("#formUsuario .rol-adicional input")).hasSize(1);
+        assertThat(vista.selectFirst("#formUsuario .rol-adicional input").val()).isEqualTo(principal.getIdRol().toString());
+        assertThat(vista.selectFirst("#formUsuario .rol-adicional input").hasAttr("disabled")).isTrue();
+        assertThat(vista.select("#formUsuario .sin-roles-adicionales")).isEmpty();
+        assertThat(vista.select("#formUsuario input[type=hidden][name=idsRoles]")).hasSize(2);
         mvc.perform(formulario(editor.getUsuario(), editor.getRol()).session(sesion(editor))
-                        .param("idUsuario", editor.getIdUsuario().toString()).param("contrasena", ""))
+                        .param("idUsuario", editor.getIdUsuario().toString()).param("contrasena", "")
+                        .param("idsRoles", principal.getIdRol().toString()))
                 .andExpect(flash().attributeExists("exito"));
-        assertThat(editor.getRolesAsignados()).hasSize(1);
+        assertThat(editor.getRolesAsignados()).hasSize(2);
     }
 
     @Test
@@ -132,9 +141,11 @@ class UsuariosFrontendIntegrationTests {
     @Test
     void unLectorSoloVeConsultaSinAltaEdicionNiEstados() throws Exception {
         Document vista = pagina("/usuarios", lector);
+        assertThat(vista.selectFirst("h1").text()).isEqualTo("Consulta de usuarios");
         assertThat(vista.select("#formUsuario, form.form-estado, a[href^='/usuarios/editar/']")).isEmpty();
         assertThat(vista.selectFirst("input[name=q]")).isNotNull();
         assertThat(vista.text()).contains(destino.getUsuario());
+        assertThat(pagina("/usuarios?q=" + destino.getUsuario(), lector).selectFirst("a[aria-label='Limpiar filtros']")).isNotNull();
     }
 
     @Test

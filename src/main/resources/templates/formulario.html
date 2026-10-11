@@ -15,8 +15,8 @@
 <div class="page-hero">
     <div class="page-hero-copy">
         <p class="auth-kicker mb-1">Administración</p>
-        <h1 class="page-heading" th:text="${usuarioForm.idUsuario == null} ? 'Registrar usuario' : 'Editar usuario'"></h1>
-        <p class="page-subtitle">Gestiona la información y el acceso del personal.</p>
+        <h1 class="page-heading" th:text="${usuarioForm.idUsuario != null} ? 'Editar usuario' : (${puedeCrear} ? 'Registrar usuario' : 'Consulta de usuarios')"></h1>
+        <p class="page-subtitle" th:text="${puedeCrear or puedeEditar} ? 'Gestiona la información y el acceso del personal.' : 'Consulta las cuentas y sus roles según tus permisos.'"></p>
     </div>
     <div class="page-hero-icon"><i class="bi bi-person-vcard"></i></div>
 </div>
@@ -104,14 +104,16 @@
     <div class="mb-3">
         <label class="form-label">Roles adicionales:</label>
         <div class="roles-adicionales border rounded p-3">
-            <div th:each="r : ${rolesAsignables}" class="form-check form-check-inline rol-adicional" th:attr="data-area=${r.area}">
+            <div th:each="r : ${rolesAsignables}" class="form-check form-check-inline rol-adicional" th:attr="data-area=${r.area}"
+                 th:if="${puedeCambiarRoles or (idsRolesSeleccionados.contains(r.idRol) and r.idRol != usuarioForm.rol.idRol)}">
                 <input class="form-check-input" type="checkbox" name="idsRoles"
                        th:id="'rolAdicional' + ${r.idRol}" th:value="${r.idRol}"
                        th:disabled="${!puedeCambiarRoles}"
                        th:checked="${idsRolesSeleccionados.contains(r.idRol)}">
                 <label class="form-check-label" th:for="'rolAdicional' + ${r.idRol}" th:text="${r.nombre} + (${r.activo} ? '' : ' (inactivo)')"></label>
             </div>
-            <span class="small text-muted sin-roles-adicionales">No hay otros roles en esta área.</span>
+            <span th:if="${puedeCambiarRoles or #sets.size(idsRolesSeleccionados) <= 1}"
+                  class="small text-muted sin-roles-adicionales">No hay otros roles en esta área.</span>
         </div>
         <div class="form-text">Opcional. Los permisos de todos los roles de la misma área se combinan.</div>
         <div th:unless="${esAdministrador}" class="form-text">No puedes asignar Administrador, cambiar tus propios roles ni conceder permisos superiores a los tuyos.</div>
@@ -173,7 +175,7 @@
         </div>
         <div class="col-md-2 d-flex gap-2">
             <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search me-1"></i>Filtrar</button>
-            <a th:if="${hayFiltros}" th:href="@{/usuarios}" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+            <a th:if="${hayFiltros}" th:href="@{/usuarios}" class="btn btn-outline-secondary" title="Limpiar filtros" aria-label="Limpiar filtros"><i class="bi bi-x-lg" aria-hidden="true"></i></a>
         </div>
     </form>
     <div class="table-responsive">
