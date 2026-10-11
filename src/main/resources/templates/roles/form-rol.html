@@ -31,21 +31,24 @@
         <div class="page-hero-icon"><i class="bi bi-person-badge"></i></div>
     </div>
 
-    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+    <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
+    <div th:if="${rol.idRol != null and !rol.activo}" class="alert alert-info" role="status">
+        Este rol está inactivo. Editar sus datos no lo reactiva; cambia su estado desde el listado de roles.
+    </div>
 
     <form th:action="@{/roles/guardar}" th:object="${rol}" method="post" class="content-card p-4 p-lg-5">
         <input type="hidden" th:field="*{idRol}">
 
         <div class="form-section">
-            <label class="form-label">Nombre</label>
+            <label class="form-label" for="nombre">Nombre</label>
             <input type="text" th:field="*{nombre}" class="form-control" required maxlength="50"
                    th:readonly="${@autorizacionService.esRolAdministrador(rol)}">
             <div th:if="${@autorizacionService.esRolAdministrador(rol)}" class="form-text">El nombre Administrador está reservado y no se puede cambiar.</div>
 
-            <label class="form-label mt-3">Descripción</label>
+            <label class="form-label mt-3" for="descripcion">Descripción</label>
             <textarea th:field="*{descripcion}" class="form-control" maxlength="255"></textarea>
 
-            <label class="form-label mt-3">Área</label>
+            <label class="form-label mt-3" for="area">Área</label>
             <select th:field="*{area}" class="form-select" required>
                 <option value="">-- Seleccione un área --</option>
                 <option value="Administración">Administración</option>

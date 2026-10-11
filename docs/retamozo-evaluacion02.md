@@ -43,3 +43,17 @@ errores ni pruebas omitidas. No se conectó a MySQL ni a SMTP real.
 
 Para la evidencia individual: muestra `Permiso.java`, `Rol.java`, las claves
 foráneas de `rol_permisos` y la lista de roles asociados antes y después de guardar.
+
+## Pregunta 4 — Gestión visual del estado de roles (RF-ROL-01)
+
+En `/roles` se ve el estado actual y, solo para administradores, el botón de
+activar/desactivar. La acción pide confirmación, usa POST con CSRF y envía el
+estado deseado explícitamente a `/{id}/estado`. No alterna estados mediante GET.
+El Administrador aparece como reservado, sin botón para desactivarlo; el backend
+sigue rechazando una petición manipulada. Los perfiles de consulta no ven botones
+de edición, asignación de permisos ni cambio de estado.
+
+Los mensajes de éxito/error se muestran de forma accesible. Si faltan roles base,
+el listado lo informa sin insertar datos desde la vista. Editar un rol inactivo
+muestra un aviso y no lo reactiva. No se agregan nuevos endpoints ni se reemplazan
+las reglas de José, Sovero o Edu.
