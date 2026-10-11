@@ -4,6 +4,22 @@ Proyecto Spring Boot que integra los 8 requerimientos de la Evaluación 01, cada
 desarrollado originalmente en una rama/zip independiente por un integrante distinto y
 fusionado aquí en una sola aplicación.
 
+## Evaluación 02 — integración de Retamozo
+
+Esta rama conserva el historial original e integra la entrega de Edu, que ya
+incluye los cambios de José y Sovero. La entrega de Leonel añade la relación
+inversa `Permiso.roles`, consulta de roles asociados, formularios multirrol,
+activación/desactivación visual de roles y navegación según permisos.
+
+- Guía de código, pruebas y evidencia individual:
+  [docs/retamozo-evaluacion02.md](docs/retamozo-evaluacion02.md).
+- Verificación automatizada: **230 pruebas** correctas con H2 en memoria.
+- Demo aislada en Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-retamozo.ps1`.
+  Abre `http://127.0.0.1:8095/login`; las cuentas ficticias y su clave temporal se
+  muestran en consola. No modifica MySQL ni habilita SMTP.
+- La verificación final con MySQL sigue pendiente. El resto de este README
+  conserva el contexto y las instrucciones de la Prueba 1.
+
 ## Alcance de esta entrega
 
 Esta es la **Prueba 1**, una entrega académica de demostración local. Incluye acceso,

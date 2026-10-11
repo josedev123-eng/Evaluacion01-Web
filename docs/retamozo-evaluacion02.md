@@ -23,14 +23,17 @@ rechazan la modificación; no autentican ni autorizan automáticamente al llamad
 ```
 
 El perfil `test` usa H2 en memoria, no ejecuta el SQL de MySQL y deshabilita SMTP.
-La recuperación continúa simulada. Las evidencias específicas de la relación
-inversa y del frontend se agregan con sus respectivas entregas.
+La recuperación continúa simulada. La relación inversa y el frontend se documentan
+abajo; cada compañero conserva la responsabilidad de su evidencia individual.
 
 Integración verificada el 11 de octubre de 2026: **204 pruebas**, sin fallos,
 errores ni pruebas omitidas. No se conectó a MySQL ni a SMTP real.
 
 Suite completa tras la entrega de frontend: **230 pruebas**, sin fallos, errores
 ni pruebas omitidas, ejecutadas con `clean verify` el mismo día y el perfil `test`.
+Se repitió la suite después de los ajustes detectados en navegador, con el mismo
+resultado. Incluye 26 pruebas de relación inversa, vistas y navegación de Leonel,
+además de ocho pruebas nuevas de integración segura del multirrol de Edu.
 
 ## Pregunta 1 — Permiso/Rol, lado inverso (RF-ROL-02)
 
@@ -46,6 +49,17 @@ ni pruebas omitidas, ejecutadas con `clean verify` el mismo día y el perfil `te
 
 Para la evidencia individual: muestra `Permiso.java`, `Rol.java`, las claves
 foráneas de `rol_permisos` y la lista de roles asociados antes y después de guardar.
+Sobre la base MySQL de pruebas autorizada, estas consultas son solo de lectura:
+
+```sql
+SHOW CREATE TABLE rol_permisos;
+SELECT p.id_permiso, p.modulo, p.nombre AS permiso,
+       r.id_rol, r.nombre AS rol, r.estado
+FROM permisos p
+LEFT JOIN rol_permisos rp ON rp.id_permiso = p.id_permiso
+LEFT JOIN roles r ON r.id_rol = rp.id_rol
+ORDER BY p.modulo, p.nombre, r.nombre;
+```
 
 ## Pregunta 4 — Gestión visual del estado de roles (RF-ROL-01)
 
@@ -77,6 +91,9 @@ original. Esto no sustituye las validaciones del servicio contra peticiones forj
 Los perfiles de consulta no ven formularios de alta ni acciones de edición/estado.
 Las cuentas protegidas y la propia cuenta conservan sus restricciones. Los mensajes
 se escapan como texto y las bajas/altas explícitas piden confirmación y usan CSRF.
+La cabecera de un lector dice **Consulta de usuarios**, no **Registrar usuario**.
+En edición propia solo aparecen los roles adicionales ya asignados, bloqueados,
+sin mostrar perfiles ajenos ni repetir el principal como adicional.
 
 ## Pregunta 5 — Navegación según permisos (RF-ROL-03/RF-ROL-04)
 
@@ -96,8 +113,13 @@ No modifica MySQL, no envía correos y no agrega cuentas al ejecutable de produc
 Usa una base H2 temporal que se pierde al apagar el proceso:
 
 ```powershell
-.\mvnw.cmd -B spring-boot:run "-Dspring-boot.run.useTestClasspath=true" "-Dspring-boot.run.profiles=test,demo" "-Dspring-boot.run.arguments=--server.port=8095"
+.\scripts\demo-retamozo.ps1
 ```
+
+Si la política local bloquea scripts, ejecuta
+`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-retamozo.ps1`.
+No cambia la política del equipo. Puedes usar `-Puerto 8096` para otro puerto;
+para detener la demostración, pulsa `Ctrl+C` en su terminal.
 
 Abre `http://127.0.0.1:8095/login`. La consola muestra una clave temporal aleatoria
 para `demoAdmin`, `demoMedico`, `demoRecepcion` y `demoEditor`. Son cuentas ficticias
@@ -115,6 +137,22 @@ Guion de evidencia:
 6. Entrar como Médico: consultar usuarios, sin formularios de administración ni
    enlaces a roles/auditoría; probar también una URL administrativa directa.
 7. Entrar como Editor y editar su propia cuenta: sus roles y área quedan bloqueados.
+
+Comprobaciones realizadas desde el navegador el 11 de octubre, sobre H2 temporal:
+
+| Flujo | Resultado observado |
+| --- | --- |
+| Registrar y editar una cuenta con principal y adicional | Aparece en el listado y conserva ambas asociaciones |
+| Desactivar y reactivar esa cuenta | Cambian estado, botón y mensaje de resultado |
+| Crear/editar un rol y cambiar su estado | Datos y estado se reflejan en el listado, con confirmación |
+| Asignar/revocar `usuarios:VER` | El rol aparece/desaparece en `Permiso.roles`, sin borrar el catálogo |
+| Consultar auditoría del administrador | Aparecen IDs, estados y asignaciones/revocaciones, sin claves ni tokens |
+| Médico con permiso de consulta | Redirige a usuarios, sin formularios ni acciones de administración |
+| Médico abre `/auditoria` directamente | Redirige al dashboard con mensaje de acceso denegado |
+
+La compilación de la demo incluye clases de prueba solo en el proceso local.
+El JAR de producción no contiene `RetamozoDemoConfig` ni la dependencia H2.
+Estas comprobaciones no equivalen a verificar el esquema real con MySQL.
 
 Para MySQL real: usar una base de pruebas autorizada y respaldada, aplicar el esquema
 del backend y repetir el guion. El 11 de octubre el servidor local no atendía en
