@@ -182,6 +182,9 @@ public class UsuarioController {
                 .filter(rol -> administrador || !autorizacionService.esRolAdministrador(rol))
                 .filter(rol -> rol.isActivo() || idsRolesSeleccionados.contains(rol.getIdRol())).toList());
         model.addAttribute("esAdministrador", administrador);
+        model.addAttribute("puedeCambiarRoles", administrador
+                || !Objects.equals(usuarioLogueado.getIdUsuario(), usuarioForm.getIdUsuario()));
+        model.addAttribute("hayRolesInactivosAsignados", usuarioForm.getRolesAsignados().stream().anyMatch(rol -> !rol.isActivo()));
         model.addAttribute("idsUsuariosProtegidos", usuarios.stream()
                 .filter(usuario -> !autorizacionService.puedeEditarUsuario(usuarioLogueado, usuario))
                 .map(Usuario::getIdUsuario).collect(Collectors.toSet()));

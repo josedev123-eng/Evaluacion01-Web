@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -32,38 +32,41 @@
     <div class="page-hero-icon"><i class="bi bi-person-vcard"></i></div>
 </div>
 
-<div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-<div th:if="${exito}" class="alert alert-success" th:text="${exito}"></div>
+<div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
+<div th:if="${exito}" class="alert alert-success" role="status" th:text="${exito}"></div>
 
 <form th:if="${(usuarioForm.idUsuario == null and puedeCrear) or (usuarioForm.idUsuario != null and puedeEditar)}"
-      id="formUsuario" th:action="@{/usuarios/guardar}" th:object="${usuarioForm}" method="post" class="content-card p-4 p-lg-5 mb-5">
+      id="formUsuario" th:action="@{/usuarios/guardar}" th:object="${usuarioForm}" method="post" class="content-card p-4 p-lg-5 mb-5"
+      th:attr="data-roles-bloqueados=${!puedeCambiarRoles}">
     <input type="hidden" th:field="*{idUsuario}" />
 
     <section class="form-section">
     <div class="form-section-title"><i class="bi bi-person me-1"></i>Información personal</div>
     <div class="row">
         <div class="col-md-6 mb-3">
-            <label class="form-label">Nombres:</label>
-            <input type="text" th:field="*{nombres}" class="form-control" required />
+            <label class="form-label" for="nombres">Nombres:</label>
+            <input type="text" th:field="*{nombres}" class="form-control" required maxlength="100" autocomplete="given-name" />
         </div>
         <div class="col-md-6 mb-3">
-            <label class="form-label">Apellidos:</label>
-            <input type="text" th:field="*{apellidos}" class="form-control" required />
+            <label class="form-label" for="apellidos">Apellidos:</label>
+            <input type="text" th:field="*{apellidos}" class="form-control" required maxlength="100" autocomplete="family-name" />
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-4 mb-3">
-            <label class="form-label">DNI:</label>
-            <input type="text" th:field="*{dni}" class="form-control" />
+            <label class="form-label" for="dni">DNI:</label>
+            <input type="text" th:field="*{dni}" class="form-control" inputmode="numeric" pattern="[0-9]{8}"
+                   minlength="8" maxlength="8" title="Opcional. Si lo ingresas, debe tener 8 dígitos." />
         </div>
         <div class="col-md-4 mb-3">
-            <label class="form-label">Correo:</label>
-            <input type="email" th:field="*{correo}" class="form-control" required />
+            <label class="form-label" for="correo">Correo:</label>
+            <input type="email" th:field="*{correo}" class="form-control" required maxlength="100" autocomplete="email" />
         </div>
         <div class="col-md-4 mb-3">
-            <label class="form-label">Teléfono:</label>
-            <input type="text" th:field="*{telefono}" class="form-control" />
+            <label class="form-label" for="telefono">Teléfono:</label>
+            <input type="tel" th:field="*{telefono}" class="form-control" maxlength="20" pattern="\+?[0-9 ]{6,20}"
+                   autocomplete="tel" title="Opcional. Entre 6 y 20 caracteres: dígitos, espacios y un + inicial." />
         </div>
     </div>
     </section>
@@ -72,12 +75,13 @@
     <div class="form-section-title"><i class="bi bi-key me-1"></i>Acceso al sistema</div>
     <div class="row">
         <div class="col-md-6 mb-3">
-            <label class="form-label">Usuario:</label>
-            <input type="text" th:field="*{usuario}" class="form-control" required />
+            <label class="form-label" for="usuario">Usuario:</label>
+            <input type="text" th:field="*{usuario}" class="form-control" required minlength="3" maxlength="50"
+                   pattern="[A-Za-z0-9._\-]{3,50}" autocomplete="off" title="De 3 a 50 caracteres: letras, números, punto, guion o guion bajo." />
         </div>
         <div class="col-md-6 mb-3">
-            <label class="form-label">Contraseña:</label>
-            <input type="password" name="contrasena" class="form-control"
+            <label class="form-label" for="contrasena">Contraseña:</label>
+            <input id="contrasena" type="password" name="contrasena" class="form-control" minlength="6" autocomplete="new-password"
                    th:placeholder="${usuarioForm.idUsuario == null} ? 'Contraseña' : 'Dejar en blanco para no cambiar'"
                    th:required="${usuarioForm.idUsuario == null}" />
         </div>
@@ -85,8 +89,8 @@
 
     <div class="row">
         <div class="col-md-6 mb-3">
-            <label class="form-label">Área:</label>
-            <select th:field="*{area}" class="form-select" required>
+            <label class="form-label" for="area">Área:</label>
+            <select th:field="*{area}" class="form-select" required th:disabled="${!puedeCambiarRoles}">
                 <option value="">-- Seleccione un área --</option>
                 <option value="Administración">Administración</option>
                 <option value="Medicina">Medicina</option>
@@ -97,10 +101,10 @@
             </select>
         </div>
         <div class="col-md-6 mb-3">
-            <label class="form-label">Rol principal:</label>
-            <select th:field="*{rol.idRol}" class="form-select" required>
+            <label class="form-label" for="rol.idRol">Rol principal:</label>
+            <select th:field="*{rol.idRol}" class="form-select" required th:disabled="${!puedeCambiarRoles}">
                 <option value="">-- Seleccione un Rol --</option>
-                <option th:each="r : ${rolesAsignables}" th:value="${r.idRol}" th:text="${r.nombre}"
+                <option th:each="r : ${rolesAsignables}" th:value="${r.idRol}" th:text="${r.nombre} + (${r.activo} ? '' : ' (inactivo)')"
                         th:attr="data-area=${r.area}"></option>
             </select>
             <div class="form-text">Primero selecciona un área para ver sus roles disponibles.</div>
@@ -114,13 +118,21 @@
             <div th:each="r : ${rolesAsignables}" class="form-check form-check-inline rol-adicional" th:attr="data-area=${r.area}">
                 <input class="form-check-input" type="checkbox" name="idsRoles"
                        th:id="'rolAdicional' + ${r.idRol}" th:value="${r.idRol}"
+                       th:disabled="${!puedeCambiarRoles}"
                        th:checked="${idsRolesSeleccionados.contains(r.idRol)}">
-                <label class="form-check-label" th:for="'rolAdicional' + ${r.idRol}" th:text="${r.nombre}"></label>
+                <label class="form-check-label" th:for="'rolAdicional' + ${r.idRol}" th:text="${r.nombre} + (${r.activo} ? '' : ' (inactivo)')"></label>
             </div>
             <span class="small text-muted sin-roles-adicionales">No hay otros roles en esta área.</span>
         </div>
         <div class="form-text">Opcional. Los permisos de todos los roles de la misma área se combinan.</div>
         <div th:unless="${esAdministrador}" class="form-text">No puedes asignar Administrador, cambiar tus propios roles ni conceder permisos superiores a los tuyos.</div>
+        <div th:if="${!puedeCambiarRoles}" class="form-text">Puedes editar tus datos personales; el área y tus roles se conservan. Solicita sus cambios a un Administrador.</div>
+        <div th:if="${hayRolesInactivosAsignados}" class="alert alert-info mt-3 mb-0" role="status">Los roles inactivos ya asignados se pueden conservar o retirar, pero no otorgan permisos.</div>
+    </div>
+    <div th:if="${!puedeCambiarRoles}">
+        <input type="hidden" name="area" th:value="${usuarioForm.area}">
+        <input type="hidden" name="rol.idRol" th:value="${usuarioForm.rol.idRol}">
+        <input th:each="idRol : ${idsRolesSeleccionados}" type="hidden" name="idsRoles" th:value="${idRol}">
     </div>
     </section>
 
@@ -196,8 +208,9 @@
         <td class="table-muted-text" th:text="${u.correo}"></td>
         <td>
             <span th:each="r, it : ${u.rolesAsignados}" class="badge me-1"
-                  th:classappend="${it.first} ? 'bg-primary' : 'bg-light text-dark border'"
-                  th:title="${it.first} ? 'Rol principal' : 'Rol adicional'" th:text="${r.nombre}"></span>
+                  th:classappend="${!r.activo} ? 'bg-secondary' : (${it.first} ? 'bg-primary' : 'bg-light text-dark border')"
+                  th:title="${!r.activo} ? 'Rol inactivo: no otorga permisos' : (${it.first} ? 'Rol principal' : 'Rol adicional')"
+                  th:text="${r.nombre} + (${r.activo} ? '' : ' (inactivo)')"></span>
         </td>
         <td>
             <span th:if="${u.estado}" class="badge bg-success">Activo</span>
@@ -226,61 +239,7 @@
 </section>
 
 </main>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Confirmación antes de activar/desactivar (RF-USR-03)
-        document.querySelectorAll('.form-estado').forEach(function (form) {
-            form.addEventListener('submit', function (evento) {
-                if (!confirm(form.dataset.confirmar)) {
-                    evento.preventDefault();
-                }
-            });
-        });
-
-        const formulario = document.getElementById('formUsuario');
-        if (!formulario) {
-            return;
-        }
-        const area = formulario.querySelector('[name="area"]');
-        const rol = formulario.querySelector('[name="rol.idRol"]');
-        const adicionales = Array.from(formulario.querySelectorAll('.rol-adicional'));
-        const sinAdicionales = formulario.querySelector('.sin-roles-adicionales');
-
-        function filtrarRoles() {
-            const areaSeleccionada = area.value;
-            Array.from(rol.options).forEach(function (opcion) {
-                if (!opcion.value) {
-                    return;
-                }
-                const disponible = opcion.dataset.area === areaSeleccionada;
-                opcion.hidden = !disponible;
-                opcion.disabled = !disponible;
-            });
-
-            if (rol.selectedOptions[0] && rol.selectedOptions[0].disabled) {
-                rol.value = '';
-            }
-
-            // Roles adicionales: solo los del área y distintos al rol principal
-            let visibles = 0;
-            adicionales.forEach(function (contenedor) {
-                const check = contenedor.querySelector('input');
-                const disponible = contenedor.dataset.area === areaSeleccionada && check.value !== rol.value;
-                contenedor.hidden = !disponible;
-                check.disabled = !disponible;
-                if (!disponible) {
-                    check.checked = false;
-                } else {
-                    visibles++;
-                }
-            });
-            sinAdicionales.hidden = visibles > 0;
-        }
-
-        area.addEventListener('change', filtrarRoles);
-        rol.addEventListener('change', filtrarRoles);
-        filtrarRoles();
-    });
-</script>
+<script th:src="@{/js/confirmar-estado.js}" defer></script>
+<script th:src="@{/js/usuarios.js}" defer></script>
 </body>
 </html>

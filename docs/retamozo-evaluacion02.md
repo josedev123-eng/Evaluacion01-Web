@@ -57,3 +57,20 @@ Los mensajes de éxito/error se muestran de forma accesible. Si faltan roles bas
 el listado lo informa sin insertar datos desde la vista. Editar un rol inactivo
 muestra un aviso y no lo reactiva. No se agregan nuevos endpoints ni se reemplazan
 las reglas de José, Sovero o Edu.
+
+## Pregunta 4 — Formularios de usuarios (RF-USR-01 a RF-USR-05)
+
+`/usuarios` conserva registro, listado/búsqueda, edición, roles y cambio de estado.
+Los controles incluyen etiquetas vinculadas, límites y formatos coherentes con
+el backend; no muestran la contraseña ni el hash de una cuenta editada. La clave
+se deja vacía para conservarla al editar y exige al menos seis caracteres si se ingresa.
+
+La selección se filtra por área y distingue roles principal/adicionales. No se
+ofrecen roles inactivos nuevos, pero se identifican los ya asignados para poder
+conservarlos o retirarlos. Un operador editando su propia cuenta no tiene controles
+habilitados para cambiar área/roles: los campos ocultos conservan la selección
+original. Esto no sustituye las validaciones del servicio contra peticiones forjadas.
+
+Los perfiles de consulta no ven formularios de alta ni acciones de edición/estado.
+Las cuentas protegidas y la propia cuenta conservan sus restricciones. Los mensajes
+se escapan como texto y las bajas/altas explícitas piden confirmación y usan CSRF.
