@@ -8,6 +8,12 @@
             <a class="nav-link text-white" th:classappend="${activo == 'inicio'} ? 'is-current'"
                th:attr="aria-current=${activo == 'inicio' ? 'page' : null}" th:href="@{/dashboard}">
                 <i class="bi bi-grid-1x2 me-1" aria-hidden="true"></i>Inicio</a>
+            <a th:if="${puedeVerPacientes}" class="nav-link text-white" th:classappend="${activo == 'pacientes'} ? 'is-current'"
+               th:attr="aria-current=${activo == 'pacientes' ? 'page' : null}" th:href="@{/pacientes}">
+                <i class="bi bi-person-heart me-1" aria-hidden="true"></i>Pacientes</a>
+            <a th:if="${puedeVerAtenciones}" class="nav-link text-white" th:classappend="${activo == 'atenciones'} ? 'is-current'"
+               th:attr="aria-current=${activo == 'atenciones' ? 'page' : null}" th:href="@{/atenciones}">
+                <i class="bi bi-clipboard2-pulse me-1" aria-hidden="true"></i>Atenciones</a>
             <a th:if="${puedeVerUsuarios}" class="nav-link text-white" th:classappend="${activo == 'usuarios'} ? 'is-current'"
                th:attr="aria-current=${activo == 'usuarios' ? 'page' : null}" th:href="@{/usuarios}">
                 <i class="bi bi-people me-1" aria-hidden="true"></i>Usuarios</a>

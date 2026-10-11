@@ -43,8 +43,8 @@ public class AutorizacionService {
     }
 
     // Redirección posterior al login: cada usuario entra al módulo que le corresponde.
-    // El Administrador ve el panel con todos los módulos; quien gestiona o consulta
-    // usuarios o roles entra directo a ese módulo; el resto de roles va al panel.
+    // El Administrador ve el panel; los permisos clínicos priorizan Pacientes.
+    // Los lectores administrativos conservan su módulo y el resto va al panel.
     public String rutaInicial(Usuario usuario) {
         Usuario actual = obtenerUsuarioActivo(usuario);
         if (actual == null) {
@@ -52,6 +52,9 @@ public class AutorizacionService {
         }
         if (tieneRolAdministrador(actual)) {
             return "/dashboard";
+        }
+        if (tienePermisoActual(actual, "pacientes", "VER")) {
+            return "/pacientes";
         }
         if (tienePermisoActual(actual, "usuarios", "VER")) {
             return "/usuarios";

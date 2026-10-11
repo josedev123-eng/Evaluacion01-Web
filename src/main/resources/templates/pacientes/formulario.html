@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datos del paciente | Sistema Hospitalario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body class="app-shell">
+<nav th:replace="~{fragments/navegacion :: barra('pacientes')}"></nav>
+<main class="app-main container py-4 py-lg-5">
+    <div class="page-hero">
+        <div class="page-hero-copy">
+            <p class="auth-kicker mb-1">Datos demográficos</p>
+            <h1 class="page-heading" th:text="${pacienteForm.idPaciente == null} ? 'Registrar paciente' : 'Editar paciente'"></h1>
+            <p class="page-subtitle">Registra a la persona atendida, sin crear una cuenta ni una contraseña.</p>
+        </div>
+        <a th:href="@{/pacientes}" class="btn btn-outline-secondary">Volver a pacientes</a>
+    </div>
+    <form th:action="@{/pacientes/guardar}" th:object="${pacienteForm}" method="post" class="content-card p-4 p-lg-5" autocomplete="off">
+        <input type="hidden" th:field="*{idPaciente}">
+        <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger" role="alert">
+            <p class="fw-bold mb-1">No se pudo guardar el paciente.</p>
+            <ul class="mb-0"><li th:each="error : ${#fields.allErrors()}" th:text="${error}"></li></ul>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label" for="nombres">Nombres</label>
+                <input type="text" th:field="*{nombres}" class="form-control" required maxlength="100">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="apellidos">Apellidos</label>
+                <input type="text" th:field="*{apellidos}" class="form-control" required maxlength="100">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="dni">DNI</label>
+                <input type="text" th:field="*{dni}" class="form-control" required inputmode="numeric" pattern="[0-9]{8}" minlength="8" maxlength="8">
+                <div class="form-text">8 dígitos. No puede repetirse entre pacientes.</div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="fechaNacimiento">Fecha de nacimiento</label>
+                <input type="date" th:field="*{fechaNacimiento}" class="form-control" required th:max="${#temporals.format(#temporals.createToday(), 'yyyy-MM-dd')}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="telefono">Teléfono (opcional)</label>
+                <input type="tel" th:field="*{telefono}" class="form-control" maxlength="20" pattern="\+?[0-9 ]{6,20}">
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">Guardar paciente</button>
+            <a th:href="@{/pacientes}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+    </form>
+    <p class="small text-muted mt-3">Demostración académica: utiliza únicamente datos ficticios.</p>
+</main>
+</body>
+</html>

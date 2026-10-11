@@ -47,7 +47,12 @@ class NavegacionFrontendIntegrationTests {
 
     @BeforeEach
     void preparar() {
-        rolMedico = rol("Médico", "usuarios");
+        rolMedico = rol("Médico", "pacientes");
+        Permiso verAtenciones = new Permiso();
+        verAtenciones.setNombre("VER");
+        verAtenciones.setModulo("atenciones");
+        rolMedico.getPermisos().add(permisos.saveAndFlush(verAtenciones));
+        roles.flush();
         admin = usuario("adminNav", rol("Administrador", null));
         medico = usuario("medicoNav", rolMedico);
         consultaRoles = usuario("rolesNav", rol("Consulta roles", "roles"));
@@ -60,16 +65,17 @@ class NavegacionFrontendIntegrationTests {
         for (var ruta : rutas.entrySet()) {
             Document vista = pagina(ruta.getKey(), sesion(admin));
             assertThat(vista.select("nav[aria-label='Navegación principal'] a").eachAttr("href"))
-                    .containsExactly("/dashboard", "/usuarios", "/roles", "/auditoria", "/logout");
+                    .containsExactly("/dashboard", "/pacientes", "/atenciones", "/usuarios", "/roles", "/auditoria", "/logout");
             assertThat(vista.select("nav a[aria-current=page]").eachAttr("href")).containsExactly(ruta.getValue());
         }
     }
 
     @Test
-    void medicoSoloVeUsuariosYUnaUrlDeAuditoriaSigueDenegada() throws Exception {
+    void medicoVeModulosClinicosSinAccesoAdministrativo() throws Exception {
         Document vista = pagina("/dashboard", sesion(medico));
-        assertThat(vista.select("nav a").eachAttr("href")).containsExactly("/dashboard", "/usuarios", "/logout");
-        assertThat(vista.select(".dashboard-action").eachAttr("href")).containsExactly("/usuarios");
+        assertThat(vista.select("nav a").eachAttr("href")).containsExactly("/dashboard", "/pacientes", "/atenciones", "/logout");
+        assertThat(vista.select(".dashboard-action").eachAttr("href")).containsExactly("/pacientes", "/atenciones");
+        mvc.perform(get("/usuarios").session(sesion(medico))).andExpect(redirectedUrl("/dashboard"));
         mvc.perform(get("/auditoria").session(sesion(medico))).andExpect(redirectedUrl("/dashboard"));
     }
 
@@ -85,7 +91,7 @@ class NavegacionFrontendIntegrationTests {
         MockHttpSession anterior = sesion(medico);
         rolMedico.setEstado(false);
         roles.flush();
-        mvc.perform(get("/usuarios").session(anterior)).andExpect(redirectedUrl("/dashboard"));
+        mvc.perform(get("/pacientes").session(anterior)).andExpect(status().isForbidden());
         Document vista = pagina("/dashboard", anterior);
         assertThat(vista.select("nav a").eachAttr("href")).containsExactly("/dashboard", "/logout");
         assertThat(vista.select(".dashboard-action")).isEmpty();
@@ -94,7 +100,7 @@ class NavegacionFrontendIntegrationTests {
     @Test
     void loginConservaLaRedireccionSegunElModuloAutorizado() throws Exception {
         mvc.perform(post("/login").with(csrf()).param("identificador", medico.getUsuario()).param("contrasena", "claveNav"))
-                .andExpect(redirectedUrl("/usuarios"));
+                .andExpect(redirectedUrl("/pacientes"));
         mvc.perform(post("/login").with(csrf()).param("identificador", consultaRoles.getUsuario()).param("contrasena", "claveNav"))
                 .andExpect(redirectedUrl("/roles"));
         mvc.perform(post("/login").with(csrf()).param("identificador", admin.getUsuario()).param("contrasena", "claveNav"))

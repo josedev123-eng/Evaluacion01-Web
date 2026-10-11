@@ -26,6 +26,15 @@ body.app-shell {
     letter-spacing: 0.01em;
 }
 
+.app-navbar .container {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.app-navbar .navbar-nav {
+    flex-wrap: wrap;
+}
+
 .app-navbar .nav-link {
     border-radius: 0.45rem;
     font-size: 0.92rem;
@@ -201,6 +210,11 @@ body.app-shell {
     font-size: 0.78rem;
     font-weight: 700;
     padding: 0.45rem 0.65rem;
+}
+
+.clinical-note {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
 }
 
 .permission-item {

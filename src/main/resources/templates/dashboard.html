@@ -24,6 +24,20 @@
                 </div>
             </div>
             <div class="row mt-4 g-3">
+                <div th:if="${puedeVerPacientes}" class="col-md-6">
+                    <a th:href="@{/pacientes}" class="dashboard-action">
+                        <span class="dashboard-action-icon"><i class="bi bi-person-heart"></i></span>
+                        <span>Pacientes<br><small class="fw-normal text-secondary">Buscar pacientes y abrir su ficha</small></span>
+                        <i class="bi bi-arrow-right ms-auto"></i>
+                    </a>
+                </div>
+                <div th:if="${puedeVerAtenciones}" class="col-md-6">
+                    <a th:href="@{/atenciones}" class="dashboard-action">
+                        <span class="dashboard-action-icon"><i class="bi bi-clipboard2-pulse"></i></span>
+                        <span>Atenciones<br><small class="fw-normal text-secondary">Consultar los registros autorizados</small></span>
+                        <i class="bi bi-arrow-right ms-auto"></i>
+                    </a>
+                </div>
                 <div th:if="${puedeVerUsuarios}" class="col-md-6">
                     <a th:href="@{/usuarios}" class="dashboard-action">
                         <span class="dashboard-action-icon"><i class="bi bi-people-fill"></i></span>
@@ -45,7 +59,7 @@
                         <i class="bi bi-arrow-right ms-auto"></i>
                     </a>
                 </div>
-                <div th:if="${!puedeVerUsuarios and !puedeVerRoles and !puedeVerAuditoria}" class="col-12 text-muted">
+                <div th:if="${!puedeVerPacientes and !puedeVerAtenciones and !puedeVerUsuarios and !puedeVerRoles and !puedeVerAuditoria}" class="col-12 text-muted">
                     Tu rol no tiene acceso a otras secciones del sistema.
                 </div>
             </div>

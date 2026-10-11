@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="historial(registros, mostrarPaciente)">
+    <div th:if="${#lists.isEmpty(registros)}" class="content-card text-muted p-4">No hay atenciones disponibles para tu cuenta en esta consulta.</div>
+    <article th:each="atencion : ${registros}" class="content-card p-4 mb-3 registro-atencion">
+        <header class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+            <div>
+                <h3 class="h6 fw-bold mb-1" th:text="'Atención #' + ${atencion.idAtencion}"></h3>
+                <a th:if="${mostrarPaciente}" th:href="@{/pacientes/{id}(id=${atencion.paciente.idPaciente})}"
+                   th:text="${atencion.paciente.nombreCompleto}"></a>
+                <p class="small text-secondary mb-0">Profesional: <span th:text="${atencion.medico.nombres} + ' ' + ${atencion.medico.apellidos}"></span>
+                    (<span th:text="${atencion.medico.usuario}"></span>)</p>
+            </div>
+            <span class="count-badge" th:text="${#temporals.format(atencion.fechaHora, 'dd/MM/yyyy HH:mm:ss')} + ' UTC'"></span>
+        </header>
+        <dl class="mb-0">
+            <dt class="small text-secondary">Motivo de consulta</dt>
+            <dd class="clinical-note" th:text="${atencion.motivo}"></dd>
+            <dt class="small text-secondary">Diagnóstico</dt>
+            <dd class="clinical-note" th:text="${atencion.diagnostico}"></dd>
+            <dt class="small text-secondary">Indicaciones</dt>
+            <dd class="clinical-note mb-0" th:text="${atencion.indicaciones ?: 'Sin indicaciones registradas.'}"></dd>
+        </dl>
+    </article>
+</div>
+</body>
+</html>
