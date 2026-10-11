@@ -13,12 +13,14 @@ activación/desactivación visual de roles y navegación según permisos.
 
 - Guía de código, pruebas y evidencia individual:
   [docs/retamozo-evaluacion02.md](docs/retamozo-evaluacion02.md).
-- Verificación automatizada: **230 pruebas** correctas con H2 en memoria.
+- Verificación automatizada: **231 pruebas** correctas con H2 en memoria.
 - Demo aislada en Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-retamozo.ps1`.
   Abre `http://127.0.0.1:8095/login`; las cuentas ficticias y su clave temporal se
   muestran en consola. No modifica MySQL ni habilita SMTP.
-- La verificación final con MySQL sigue pendiente. El resto de este README
-  conserva el contexto y las instrucciones de la Prueba 1.
+- Servidor SQL local comprobado: **MariaDB 10.4.32 (XAMPP)**, sobre una base
+  separada y con validación del esquema JPA. La ejecución específicamente con
+  MySQL 8 sigue pendiente. El resto de este README conserva el contexto y las
+  instrucciones de la Prueba 1.
 
 ## Alcance de esta entrega
 

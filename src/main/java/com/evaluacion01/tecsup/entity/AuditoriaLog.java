@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -35,6 +37,7 @@ public class AuditoriaLog {
     private String usuarioEjecutor;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20, updatable = false)
     private ModuloAuditoria modulo;
 
@@ -60,6 +63,7 @@ public class AuditoriaLog {
     private String ruta;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 10, updatable = false)
     private ResultadoAuditoria resultado;
 

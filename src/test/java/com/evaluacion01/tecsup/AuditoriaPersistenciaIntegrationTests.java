@@ -5,6 +5,8 @@ import com.evaluacion01.tecsup.audit.ResultadoAuditoria;
 import com.evaluacion01.tecsup.entity.AuditoriaLog;
 import com.evaluacion01.tecsup.repository.AuditoriaLogRepository;
 import com.evaluacion01.tecsup.service.AuditoriaService;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +32,16 @@ class AuditoriaPersistenciaIntegrationTests {
     @BeforeEach
     void limpiarDatosDePrueba() {
         logs.deleteAll();
+    }
+
+    @Test
+    void losEnumsDeAuditoriaRespetanLasColumnasVarcharDelEsquemaSql() throws Exception {
+        // Hibernate 6 usa ENUM nativo en MySQL por defecto: no coincide con schema.sql.
+        for (String campo : new String[]{"modulo", "resultado"}) {
+            JdbcTypeCode tipo = AuditoriaLog.class.getDeclaredField(campo).getAnnotation(JdbcTypeCode.class);
+            assertThat(tipo).as("Tipo JDBC explícito de %s", campo).isNotNull();
+            assertThat(tipo.value()).isEqualTo(SqlTypes.VARCHAR);
+        }
     }
 
     @Test

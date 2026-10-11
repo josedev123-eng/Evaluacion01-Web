@@ -154,6 +154,56 @@ La compilación de la demo incluye clases de prueba solo en el proceso local.
 El JAR de producción no contiene `RetamozoDemoConfig` ni la dependencia H2.
 Estas comprobaciones no equivalen a verificar el esquema real con MySQL.
 
-Para MySQL real: usar una base de pruebas autorizada y respaldada, aplicar el esquema
-del backend y repetir el guion. El 11 de octubre el servidor local no atendía en
-puerto 3306, por lo que aún no se afirma verificación con MySQL.
+Para MySQL 8: usar una base de pruebas autorizada y respaldada, aplicar el esquema
+del backend y repetir el guion. En la primera revisión del 11 de octubre el servidor
+local no atendía en puerto 3306. La prueba posterior con el servidor XAMPP encendido
+se documenta a continuación; no se presenta MariaDB como si fuera MySQL 8.
+
+## Prueba del servidor SQL local — XAMPP
+
+Al solicitar una nueva prueba el 11 de octubre, el puerto 3306 ya estaba activo.
+La consulta `SELECT VERSION(), @@version_comment` identificó **MariaDB 10.4.32**,
+no MySQL 8. Se creó exclusivamente la base
+`ev02_retamozo_prueba_20261011_130017_6d57a271`; no se ejecutaron cambios en
+`bd_hospital` ni en otras bases existentes.
+
+El arranque de prueba utiliza `ddl-auto=validate`, el esquema SQL del proyecto
+antes de JPA y la autoconfiguración SMTP deshabilitada. La primera validación
+detectó que Hibernate 6 esperaba ENUM nativo para `AuditoriaLog.modulo` y
+`resultado`, mientras que `schema.sql` define VARCHAR. Se añade
+`@JdbcTypeCode(SqlTypes.VARCHAR)` a ambos campos, manteniendo `EnumType.STRING`,
+los valores del dominio y las columnas existentes; no se requiere migración.
+
+La semilla manual de esta base de pruebas contiene **14 roles, 6 permisos y una
+cuenta administrativa ficticia**. Su área se completó con el área del rol dentro
+de la misma base, como indica la instalación del README. Ninguna clave ni token
+se incluye en los resultados de auditoría o consultas de evidencia.
+
+Tras el ajuste, `mvnw.cmd -B verify "-Dspring.profiles.active=test"` finalizó con
+**231 pruebas, cero fallos, errores u omisiones**, incluido el nuevo caso que
+impide retirar el mapeo VARCHAR de esos enums. La inspección de la base separada
+confirmó `modulo VARCHAR(20)`, `resultado VARCHAR(10)` y las cinco claves foráneas
+de `usuarios.id_rol`, `usuario_roles` y `rol_permisos`.
+
+La aplicación arrancó correctamente con esa validación estricta y se comprobaron
+desde navegador y SQL las siguientes operaciones sobre la base separada:
+
+| Comprobación | Resultado |
+| --- | --- |
+| Login administrativo | Acceso al dashboard |
+| Registro multirrol | `pruebaRetamozoSql` conserva principal Médico y adicional Médico general en `usuario_roles` |
+| Edición con clave vacía | Cambian los datos; sigue funcionando la clave anterior y se mantiene BCrypt |
+| Activar/desactivar cuenta y rol | Los estados cambian en la vista y la persistencia; Administrador aparece reservado |
+| Asignar, revocar y reasignar `usuarios:VER` | La consulta inversa refleja cada cambio y el catálogo se conserva |
+| Auditoría administrativa | Se consultan éxitos de usuarios, roles y permisos guardados en las columnas VARCHAR |
+| Usuario de consulta | Login redirige a usuarios, sin alta, edición ni controles de estado |
+| URL de auditoría no autorizada | Redirección al dashboard; se persiste el evento DENEGADO |
+| POST de estado sin CSRF | HTTP 403, sin modificar la cuenta |
+| Solicitud de recuperación simulada | HTTP 200 y token únicamente en la consola, con SMTP deshabilitado |
+| Restablecimiento y reutilización | Éxito inicial; token y vencimiento quedan NULL; un segundo uso devuelve HTTP 400 |
+
+La base separada se conserva para revisar la evidencia; no incluye usuarios reales.
+Los logs temporales con el token simulado **no se publican**. Con el dialecto MySQL
+predeterminado Hibernate advierte sobre la versión anunciada por MariaDB; las
+comprobaciones realizadas son del motor y versión indicados, no una garantía de
+compatibilidad universal. La ejecución específicamente con MySQL 8 sigue pendiente.
