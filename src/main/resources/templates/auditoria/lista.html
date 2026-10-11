@@ -9,18 +9,7 @@
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body class="app-shell">
-<nav class="navbar navbar-expand app-navbar" aria-label="Navegación principal">
-    <div class="container">
-        <span class="navbar-brand"><i class="bi bi-heart-pulse-fill me-2"></i>Sistema Hospitalario</span>
-        <div class="navbar-nav">
-            <a class="nav-link text-white" th:href="@{/dashboard}">Inicio</a>
-            <a th:if="${puedeVerUsuarios}" class="nav-link text-white" th:href="@{/usuarios}">Usuarios</a>
-            <a th:if="${puedeVerRoles}" class="nav-link text-white" th:href="@{/roles}">Roles</a>
-            <a class="nav-link text-white is-current" th:href="@{/auditoria}" aria-current="page">Auditoría</a>
-            <a class="nav-link text-white logout-link" th:href="@{/logout}">Salir</a>
-        </div>
-    </div>
-</nav>
+<nav th:replace="~{fragments/navegacion :: barra('auditoria')}"></nav>
 <main class="app-main container py-4 py-lg-5">
     <div class="page-hero">
         <div class="page-hero-copy">

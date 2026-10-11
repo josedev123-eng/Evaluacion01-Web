@@ -29,6 +29,9 @@ inversa y del frontend se agregan con sus respectivas entregas.
 Integración verificada el 11 de octubre de 2026: **204 pruebas**, sin fallos,
 errores ni pruebas omitidas. No se conectó a MySQL ni a SMTP real.
 
+Suite completa tras la entrega de frontend: **230 pruebas**, sin fallos, errores
+ni pruebas omitidas, ejecutadas con `clean verify` el mismo día y el perfil `test`.
+
 ## Pregunta 1 — Permiso/Rol, lado inverso (RF-ROL-02)
 
 - `Permiso.roles`: `@ManyToMany(mappedBy = "permisos")`, carga LAZY y sin cascadas.
@@ -74,3 +77,45 @@ original. Esto no sustituye las validaciones del servicio contra peticiones forj
 Los perfiles de consulta no ven formularios de alta ni acciones de edición/estado.
 Las cuentas protegidas y la propia cuenta conservan sus restricciones. Los mensajes
 se escapan como texto y las bajas/altas explícitas piden confirmación y usan CSRF.
+
+## Pregunta 5 — Navegación según permisos (RF-ROL-03/RF-ROL-04)
+
+Las seis vistas administrativas comparten `fragments/navegacion.html`. El menú
+y las tarjetas del dashboard usan los permisos actuales que recarga el backend,
+no una copia antigua de la sesión. El módulo actual tiene `aria-current="page"`.
+La barra conserva el comportamiento adaptable a pantallas pequeñas.
+
+La redirección de Sovero se conserva: Administrador → dashboard, permiso de
+consulta de usuarios → usuarios, consulta de roles → roles, sin módulos → dashboard.
+Ocultar enlaces no autoriza nada: se comprueban también URLs directas, formularios
+forjados y la revocación de permisos de una sesión anterior.
+
+## Demostración aislada desde el navegador
+
+No modifica MySQL, no envía correos y no agrega cuentas al ejecutable de producción.
+Usa una base H2 temporal que se pierde al apagar el proceso:
+
+```powershell
+.\mvnw.cmd -B spring-boot:run "-Dspring-boot.run.useTestClasspath=true" "-Dspring-boot.run.profiles=test,demo" "-Dspring-boot.run.arguments=--server.port=8095"
+```
+
+Abre `http://127.0.0.1:8095/login`. La consola muestra una clave temporal aleatoria
+para `demoAdmin`, `demoMedico`, `demoRecepcion` y `demoEditor`. Son cuentas ficticias
+de esta ejecución, no credenciales SMTP. Los perfiles no administrativos tienen
+solo los permisos asignados en el fixture; los módulos clínicos del ejemplo del
+enunciado no se inventan ni se anuncian como implementados.
+
+Guion de evidencia:
+
+1. Administrador: registrar/editar un usuario y seleccionar sus roles por área.
+2. Activar/desactivar otra cuenta; comprobar su estado en el listado.
+3. Crear/editar un rol; desactivarlo y reactivarlo desde `/roles`.
+4. Asignar/revocar permisos y observar la relación inversa en la misma pantalla.
+5. Consultar la bitácora y comprobar los IDs y operaciones de esos cambios.
+6. Entrar como Médico: consultar usuarios, sin formularios de administración ni
+   enlaces a roles/auditoría; probar también una URL administrativa directa.
+7. Entrar como Editor y editar su propia cuenta: sus roles y área quedan bloqueados.
+
+Para MySQL real: usar una base de pruebas autorizada y respaldada, aplicar el esquema
+del backend y repetir el guion. El 11 de octubre el servidor local no atendía en
+puerto 3306, por lo que aún no se afirma verificación con MySQL.
