@@ -42,6 +42,26 @@ public class AutorizacionService {
         return usuario != null && usuario.getRolesAsignados().stream().anyMatch(this::esRolAdministrador);
     }
 
+    // Redirección posterior al login: cada usuario entra al módulo que le corresponde.
+    // El Administrador ve el panel con todos los módulos; quien gestiona o consulta
+    // usuarios o roles entra directo a ese módulo; el resto de roles va al panel.
+    public String rutaInicial(Usuario usuario) {
+        Usuario actual = obtenerUsuarioActivo(usuario);
+        if (actual == null) {
+            return "/login";
+        }
+        if (tieneRolAdministrador(actual)) {
+            return "/dashboard";
+        }
+        if (tienePermisoActual(actual, "usuarios", "VER")) {
+            return "/usuarios";
+        }
+        if (tienePermisoActual(actual, "roles", "VER")) {
+            return "/roles";
+        }
+        return "/dashboard";
+    }
+
     public void exigirAdministrador(Usuario operador) {
         if (!esAdministrador(operador)) {
             throw new AccessDeniedException("Solo un Administrador puede gestionar roles y permisos.");
@@ -118,7 +138,9 @@ public class AutorizacionService {
         if (esPermisoReservado(modulo, nombrePermiso)) {
             return false;
         }
+        // Un rol inactivo sigue asignado al usuario, pero no aporta ninguno de sus permisos.
         return actual.getRolesAsignados().stream()
+                .filter(Rol::isActivo)
                 .flatMap(rol -> rol.getPermisos().stream())
                 .anyMatch(p -> modulo.equalsIgnoreCase(p.getModulo())
                         && nombrePermiso.equalsIgnoreCase(p.getNombre()));

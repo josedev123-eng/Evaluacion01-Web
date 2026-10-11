@@ -72,7 +72,7 @@ public class Usuario {
     private Rol rol;
 
     // RF-USR-04: todos los roles asignados al usuario, incluido el principal.
-    // EAGER porque el usuario se guarda en la sesión HTTP y se usa fuera de una transacción.
+    // Los roles pertenecen al catálogo: guardar una cuenta no debe persistirlos ni modificarlos en cascada.
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "usuario_roles",

@@ -2,6 +2,7 @@ INSERT IGNORE INTO roles (nombre, descripcion, area) VALUES
     ('Administrador', 'Gestión total del sistema, usuarios, roles y permisos', 'Administración'),
     ('Coordinador administrativo', 'Coordinación de procesos administrativos', 'Administración'),
     ('Auditor administrativo', 'Consulta y supervisión de la configuración administrativa', 'Administración'),
+    ('Médico', 'Historias clínicas, consultas y diagnósticos', 'Medicina'),
     ('Médico general', 'Atención médica general', 'Medicina'),
     ('Médico especialista', 'Atención médica especializada', 'Medicina'),
     ('Enfermero', 'Atención y cuidado de pacientes', 'Enfermería'),
@@ -18,7 +19,8 @@ INSERT IGNORE INTO permisos (nombre, modulo) VALUES
     ('CREAR', 'usuarios'),
     ('EDITAR', 'usuarios'),
     ('VER', 'roles'),
-    ('EDITAR', 'roles');
+    ('EDITAR', 'roles'),
+    ('VER', 'auditoria');
 
 INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
@@ -35,7 +37,7 @@ WHERE r.nombre = 'Coordinador administrativo';
 INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
 FROM roles r
-JOIN permisos p ON p.nombre = 'VER' AND p.modulo IN ('usuarios', 'roles')
+JOIN permisos p ON p.nombre = 'VER' AND p.modulo IN ('usuarios', 'roles', 'auditoria')
 WHERE r.nombre = 'Auditor administrativo';
 
 -- Usuario administrador de ejemplo: usuario=admin, contraseña=admin123

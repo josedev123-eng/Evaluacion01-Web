@@ -17,6 +17,13 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByResetToken(String resetToken);
     boolean existsByUsuario(String usuario);
     boolean existsByCorreo(String correo);
+    // Validación de duplicados antes de guardar (sin distinguir mayúsculas).
+    boolean existsByUsuarioIgnoreCase(String usuario);
+    boolean existsByUsuarioIgnoreCaseAndIdUsuarioNot(String usuario, Long idUsuario);
+    boolean existsByCorreoIgnoreCase(String correo);
+    boolean existsByCorreoIgnoreCaseAndIdUsuarioNot(String correo, Long idUsuario);
+    boolean existsByDni(String dni);
+    boolean existsByDniAndIdUsuarioNot(String dni, Long idUsuario);
     // Cuenta cada administrador una sola vez, sea su rol principal o adicional.
     @Query("""
             SELECT COUNT(DISTINCT u.idUsuario) FROM Usuario u LEFT JOIN u.roles r

@@ -8,6 +8,7 @@ import com.evaluacion01.tecsup.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -16,9 +17,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class UsuarioServiceImpl implements UsuarioService {
+
+    private static final Pattern CORREO = Pattern.compile("^[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+$");
+    private static final Pattern DNI = Pattern.compile("^\\d{8}$");
+    private static final Pattern TELEFONO = Pattern.compile("^\\+?[\\d ]{6,20}$");
+    private static final Pattern NOMBRE_USUARIO = Pattern.compile("^[A-Za-z0-9._-]{3,50}$");
+    private static final int LONGITUD_MINIMA_CONTRASENA = 6;
 
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
@@ -60,12 +68,14 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Transactional
     public Usuario registrarUsuario(Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador) {
         try {
+            validarDatos(usuario, null);
             Rol principal = obtenerRolPrincipal(usuario);
-            Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuario.getArea());
+            Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuario.getArea(), List.of());
             autorizacionService.validarAsignacionRoles(operador, null, roles);
             if (usuario.getContrasena() == null || usuario.getContrasena().isBlank()) {
                 throw new IllegalArgumentException("La contraseña es obligatoria para registrar un usuario.");
             }
+            validarContrasena(usuario.getContrasena());
             // No persistir id, estado, tokens ni asociaciones enviados fuera del formulario.
             Usuario nuevo = new Usuario();
             copiarDatosPersonales(usuario, nuevo);
@@ -91,8 +101,13 @@ public class UsuarioServiceImpl implements UsuarioService {
         try {
             Usuario usuarioExistente = obtenerPorId(id);
             autorizacionService.validarEdicionUsuario(operador, usuarioExistente);
+            validarDatos(usuarioActualizado, id);
+            if (usuarioActualizado.getContrasena() != null && !usuarioActualizado.getContrasena().isEmpty()) {
+                validarContrasena(usuarioActualizado.getContrasena());
+            }
             Rol principal = obtenerRolPrincipal(usuarioActualizado);
-            Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuarioActualizado.getArea());
+            Set<Rol> roles = armarRoles(principal, idsRolesAdicionales, usuarioActualizado.getArea(),
+                    idsRoles(usuarioExistente.getRolesAsignados()));
             autorizacionService.validarAsignacionRoles(operador, usuarioExistente, roles);
             validarConservacionAdministrador(usuarioExistente, roles);
             String detalle = detallarCambios(usuarioExistente, usuarioActualizado, principal, roles);
@@ -146,8 +161,11 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     // RF-USR-04: el rol principal siempre forma parte de los roles asignados. Todos los
     // roles deben pertenecer al área del usuario, igual que la regla del rol principal.
-    private Set<Rol> armarRoles(Rol principal, List<Integer> idsRolesAdicionales, String area) {
+    // Un rol inactivo no admite asignaciones nuevas: solo lo conserva quien ya lo tenía.
+    private Set<Rol> armarRoles(Rol principal, List<Integer> idsRolesAdicionales, String area,
+                                List<Integer> idsRolesYaAsignados) {
         validarArea(principal, area);
+        validarRolAsignable(principal, idsRolesYaAsignados);
         Set<Rol> roles = new LinkedHashSet<>();
         roles.add(principal);
         if (idsRolesAdicionales != null) {
@@ -157,6 +175,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 }
                 Rol rol = obtenerRol(idRol);
                 validarArea(rol, area);
+                validarRolAsignable(rol, idsRolesYaAsignados);
                 roles.add(rol);
             }
         }
@@ -175,9 +194,83 @@ public class UsuarioServiceImpl implements UsuarioService {
         return obtenerRol(usuario.getRol().getIdRol());
     }
 
+    private void validarRolAsignable(Rol rol, List<Integer> idsRolesYaAsignados) {
+        if (!rol.isActivo() && !idsRolesYaAsignados.contains(rol.getIdRol())) {
+            throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' está inactivo y no se puede asignar.");
+        }
+    }
+
     private void validarArea(Rol rol, String area) {
         if (area == null || rol.getArea() == null || !rol.getArea().equalsIgnoreCase(area.trim())) {
             throw new IllegalArgumentException("El rol '" + rol.getNombre() + "' no corresponde al área elegida.");
+        }
+    }
+
+    // Normaliza los textos del formulario y valida obligatorios, formatos y duplicados.
+    // idExcluido es el propio usuario al editar, para que conservar sus datos no cuente como duplicado.
+    private void validarDatos(Usuario usuario, Long idExcluido) {
+        usuario.setNombres(obligatorio(usuario.getNombres(), "nombres", 100));
+        usuario.setApellidos(obligatorio(usuario.getApellidos(), "apellidos", 100));
+        usuario.setCorreo(obligatorio(usuario.getCorreo(), "correo", 100).toLowerCase());
+        usuario.setUsuario(obligatorio(usuario.getUsuario(), "usuario", 50));
+        usuario.setArea(obligatorio(usuario.getArea(), "área", 100));
+        usuario.setDni(opcional(usuario.getDni()));
+        usuario.setTelefono(opcional(usuario.getTelefono()));
+
+        if (!CORREO.matcher(usuario.getCorreo()).matches()) {
+            throw new IllegalArgumentException("El correo no tiene un formato válido.");
+        }
+        if (!NOMBRE_USUARIO.matcher(usuario.getUsuario()).matches()) {
+            throw new IllegalArgumentException("El usuario debe tener de 3 a 50 caracteres: letras, números, punto, guion o guion bajo.");
+        }
+        if (usuario.getDni() != null && !DNI.matcher(usuario.getDni()).matches()) {
+            throw new IllegalArgumentException("El DNI debe tener 8 dígitos.");
+        }
+        if (usuario.getTelefono() != null && !TELEFONO.matcher(usuario.getTelefono()).matches()) {
+            throw new IllegalArgumentException("El teléfono solo puede tener dígitos, espacios y un + inicial.");
+        }
+
+        boolean usuarioRepetido = idExcluido == null
+                ? usuarioRepository.existsByUsuarioIgnoreCase(usuario.getUsuario())
+                : usuarioRepository.existsByUsuarioIgnoreCaseAndIdUsuarioNot(usuario.getUsuario(), idExcluido);
+        if (usuarioRepetido) {
+            throw new IllegalArgumentException("Ya existe un usuario con ese nombre de usuario.");
+        }
+        boolean correoRepetido = idExcluido == null
+                ? usuarioRepository.existsByCorreoIgnoreCase(usuario.getCorreo())
+                : usuarioRepository.existsByCorreoIgnoreCaseAndIdUsuarioNot(usuario.getCorreo(), idExcluido);
+        if (correoRepetido) {
+            throw new IllegalArgumentException("Ya existe un usuario con ese correo.");
+        }
+        if (usuario.getDni() != null) {
+            boolean dniRepetido = idExcluido == null
+                    ? usuarioRepository.existsByDni(usuario.getDni())
+                    : usuarioRepository.existsByDniAndIdUsuarioNot(usuario.getDni(), idExcluido);
+            if (dniRepetido) {
+                throw new IllegalArgumentException("Ya existe un usuario con ese DNI.");
+            }
+        }
+    }
+
+    private String obligatorio(String valor, String campo, int longitudMaxima) {
+        if (valor == null || valor.isBlank()) {
+            throw new IllegalArgumentException("El campo " + campo + " es obligatorio.");
+        }
+        String limpio = valor.trim();
+        if (limpio.length() > longitudMaxima) {
+            throw new IllegalArgumentException("El campo " + campo + " admite como máximo " + longitudMaxima + " caracteres.");
+        }
+        return limpio;
+    }
+
+    // DNI y teléfono vacíos se guardan como NULL: dni es UNIQUE y dos "" chocarían entre sí.
+    private String opcional(String valor) {
+        return (valor == null || valor.isBlank()) ? null : valor.trim();
+    }
+
+    private void validarContrasena(String contrasena) {
+        if (contrasena.length() < LONGITUD_MINIMA_CONTRASENA) {
+            throw new IllegalArgumentException("La contraseña debe tener al menos " + LONGITUD_MINIMA_CONTRASENA + " caracteres.");
         }
     }
 
@@ -220,5 +313,71 @@ public class UsuarioServiceImpl implements UsuarioService {
         // Solo nombres de campos e IDs: no duplicar DNI, correo, teléfono ni claves en el historial.
         return "Campos modificados: " + campos + "; rol principal: " + anterior.getRol().getIdRol()
                 + " -> " + principal.getIdRol() + "; roles: " + antes + " -> " + despues;
+    }
+    @Override
+    @Transactional
+    public void asignarRolAdicional(Long usuarioId, Long rolId, Usuario operador) {
+        try {
+            exigirPermisoRoles(operador);
+            Usuario usuario = obtenerPorId(usuarioId);
+            autorizacionService.validarEdicionUsuario(operador, usuario);
+            Rol rol = obtenerRolAdicional(rolId);
+            if (usuario.getRolesAsignados().stream().anyMatch(r -> r.getIdRol().equals(rol.getIdRol()))) {
+                return;
+            }
+            validarRolAsignable(rol, idsRoles(usuario.getRolesAsignados()));
+            validarArea(rol, usuario.getArea());
+            Set<Rol> nuevosRoles = new LinkedHashSet<>(usuario.getRolesAsignados());
+            nuevosRoles.add(rol);
+            autorizacionService.validarAsignacionRoles(operador, usuario, nuevosRoles);
+            usuario.setRoles(nuevosRoles);
+            usuarioRepository.saveAndFlush(usuario);
+            auditoriaService.registrarExito(operador, ModuloAuditoria.USUARIOS, "ASIGNAR_ROL_ADICIONAL", "Usuario", usuarioId,
+                    "Rol adicional asignado: id=" + rolId);
+        } catch (RuntimeException e) {
+            auditoriaService.registrarFalloOperacion(operador, ModuloAuditoria.USUARIOS, "ASIGNAR_ROL_ADICIONAL", "Usuario", usuarioId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public void removerRolAdicional(Long usuarioId, Long rolId, Usuario operador) {
+        try {
+            exigirPermisoRoles(operador);
+            Usuario usuario = obtenerPorId(usuarioId);
+            autorizacionService.validarEdicionUsuario(operador, usuario);
+            Rol rol = obtenerRolAdicional(rolId);
+            if (rol.getIdRol().equals(usuario.getRol().getIdRol())) {
+                throw new IllegalArgumentException("No se puede remover el rol principal del usuario.");
+            }
+            Set<Rol> nuevosRoles = new LinkedHashSet<>(usuario.getRolesAsignados());
+            boolean removed = nuevosRoles.removeIf(r -> r.getIdRol().equals(rol.getIdRol()));
+            if (!removed) {
+                return;
+            }
+            autorizacionService.validarAsignacionRoles(operador, usuario, nuevosRoles);
+            validarConservacionAdministrador(usuario, nuevosRoles);
+            usuario.setRoles(nuevosRoles);
+            usuarioRepository.saveAndFlush(usuario);
+            auditoriaService.registrarExito(operador, ModuloAuditoria.USUARIOS, "REMOVER_ROL_ADICIONAL", "Usuario", usuarioId,
+                    "Rol adicional removido: id=" + rolId);
+        } catch (RuntimeException e) {
+            auditoriaService.registrarFalloOperacion(operador, ModuloAuditoria.USUARIOS, "REMOVER_ROL_ADICIONAL", "Usuario", usuarioId, e);
+            throw e;
+        }
+    }
+
+    private void exigirPermisoRoles(Usuario operador) {
+        if (!autorizacionService.tienePermiso(operador, "usuarios", "EDITAR")) {
+            throw new AccessDeniedException("No tienes permiso para modificar usuarios.");
+        }
+    }
+
+    private Rol obtenerRolAdicional(Long id) {
+        if (id == null || id <= 0 || id > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("El identificador del rol no es válido.");
+        }
+        return obtenerRol(id.intValue());
     }
 }

@@ -10,4 +10,17 @@ public interface UsuarioService {
     Usuario registrarUsuario(Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador);
     Usuario actualizarUsuario(Long id, Usuario usuario, List<Integer> idsRolesAdicionales, Usuario operador);
     Usuario cambiarEstado(Long id, boolean activo, Usuario usuarioLogueado);
+    void asignarRolAdicional(Long usuarioId, Long rolId, Usuario operador);
+    void removerRolAdicional(Long usuarioId, Long rolId, Usuario operador);
+
+    // Compatibilidad con la entrega anterior: sin operador se rechaza la modificación.
+    @Deprecated
+    default void asignarRolAdicional(Long usuarioId, Long rolId) {
+        asignarRolAdicional(usuarioId, rolId, null);
+    }
+
+    @Deprecated
+    default void removerRolAdicional(Long usuarioId, Long rolId) {
+        removerRolAdicional(usuarioId, rolId, null);
+    }
 }

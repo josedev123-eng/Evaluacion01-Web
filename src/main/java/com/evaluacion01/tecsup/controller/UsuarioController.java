@@ -177,8 +177,10 @@ public class UsuarioController {
         model.addAttribute("usuarioForm", usuarioForm);
         model.addAttribute("idsRolesSeleccionados", idsRolesSeleccionados);
         model.addAttribute("roles", roles);
+        // Los roles inactivos no se ofrecen, salvo los que el usuario editado ya tiene.
         model.addAttribute("rolesAsignables", roles.stream()
-                .filter(rol -> administrador || !autorizacionService.esRolAdministrador(rol)).toList());
+                .filter(rol -> administrador || !autorizacionService.esRolAdministrador(rol))
+                .filter(rol -> rol.isActivo() || idsRolesSeleccionados.contains(rol.getIdRol())).toList());
         model.addAttribute("esAdministrador", administrador);
         model.addAttribute("idsUsuariosProtegidos", usuarios.stream()
                 .filter(usuario -> !autorizacionService.puedeEditarUsuario(usuarioLogueado, usuario))
