@@ -20,7 +20,12 @@ INSERT IGNORE INTO permisos (nombre, modulo) VALUES
     ('EDITAR', 'usuarios'),
     ('VER', 'roles'),
     ('EDITAR', 'roles'),
-    ('VER', 'auditoria');
+    ('VER', 'auditoria'),
+    ('VER', 'pacientes'),
+    ('CREAR', 'pacientes'),
+    ('EDITAR', 'pacientes'),
+    ('VER', 'atenciones'),
+    ('CREAR', 'atenciones');
 
 INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
@@ -39,6 +44,14 @@ SELECT r.id_rol, p.id_permiso
 FROM roles r
 JOIN permisos p ON p.nombre = 'VER' AND p.modulo IN ('usuarios', 'roles', 'auditoria')
 WHERE r.nombre = 'Auditor administrativo';
+
+-- Los médicos trabajan con pacientes, no con las cuentas del personal.
+INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM roles r
+JOIN permisos p ON (p.modulo = 'pacientes' AND p.nombre = 'VER')
+    OR (p.modulo = 'atenciones' AND p.nombre IN ('VER', 'CREAR'))
+WHERE r.nombre IN ('Médico', 'Médico general', 'Médico especialista');
 
 -- Usuario administrador de ejemplo: usuario=admin, contraseña=admin123
 INSERT IGNORE INTO usuarios (nombres, apellidos, correo, usuario, contrasena, estado, fecha_registro, id_rol)

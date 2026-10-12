@@ -1,4 +1,4 @@
-# Evaluacion01-Web — Sistema Hospitalario (Tecsup) | Prueba 1
+# Evaluacion01-Web — Sistema Hospitalario (Tecsup)
 
 Proyecto Spring Boot que integra los 8 requerimientos de la Evaluación 01, cada uno
 desarrollado originalmente en una rama/zip independiente por un integrante distinto y
@@ -22,19 +22,32 @@ activación/desactivación visual de roles y navegación según permisos.
   MySQL 8 sigue pendiente. El resto de este README conserva el contexto y las
   instrucciones de la Prueba 1.
 
+### Extensión clínica: Pacientes y Atenciones
+
+El Médico ahora consulta pacientes y registra atenciones con su cuenta y la fecha
+del servidor. Solo ve sus propias notas; Administrador registra/edita los datos
+de pacientes y puede revisar todas las atenciones. Las cuentas del personal siguen
+en Usuarios: **un paciente no necesita usuario ni contraseña**.
+
+Guía de permisos, preparación y demostración:
+[docs/modulo-clinico.md](docs/modulo-clinico.md). Se conservan autorización multirrol,
+CSRF, auditoría sin textos clínicos y recuperación simulada. No se incluyen citas
+ni funciones de recepción; utiliza exclusivamente datos ficticios.
+
 ## Alcance de esta entrega
 
-Esta es la **Prueba 1**, una entrega académica de demostración local. Incluye acceso,
-recuperación de contraseña y administración de usuarios, áreas, roles y permisos.
+Esta entrega académica conserva la **Prueba 1**, integra Evaluación 02 y añade la
+extensión clínica documentada arriba. Incluye acceso, recuperación de contraseña,
+administración de usuarios/roles/permisos, auditoría, pacientes y atenciones.
 No está preparada para producción ni debe exponerse a Internet con la configuración
 y credenciales de ejemplo actuales. Los problemas conocidos quedan registrados al
 final de este documento para las siguientes entregas.
 
-Los roles hospitalarios sirven como catálogo de personal. Todavía no existen módulos
-de pacientes, citas, atención médica, laboratorio o medicamentos. Un médico no recibe
-acceso administrativo a usuarios por pertenecer al área de Medicina. Para los roles
-sin acceso a módulos actuales, **más adelante se agregarán nuevas funciones**; por
-ahora el dashboard informa que el rol no tiene acceso a otras secciones.
+Los roles hospitalarios sirven como catálogo de personal. Médico, Médico general
+y Médico especialista reciben permisos de pacientes y atenciones en la semilla,
+no acceso administrativo por pertenecer a Medicina. Todavía no existen citas,
+laboratorio, medicamentos ni funciones de recepción. Los roles sin permisos para
+módulos implementados siguen viendo un dashboard sin accesos adicionales.
 
 ## Tecnologías
 
@@ -278,17 +291,18 @@ piezas funcionaran juntas:
 | Laboratorio | Analista de laboratorio, Técnico de laboratorio |
 | Farmacia | Farmacéutico, Auxiliar de farmacia |
 
-La semilla contiene **14 roles, 5 permisos y 1 cuenta inicial**. La cuenta de
+La semilla contiene **14 roles, 11 permisos y 1 cuenta inicial**. La cuenta de
 demostración es `admin` con contraseña `admin123`. Importar la semilla no borra ni
 reinicia una base existente; el reinicio realizado durante el desarrollo fue una
 operación manual exclusiva de la base local.
 
 | Rol | Permisos iniciales |
 | --- | --- |
-| Administrador | Todos los permisos de usuarios y roles |
+| Administrador | Acceso total administrativo, de auditoría y clínico |
 | Coordinador administrativo | Ver, crear y editar usuarios; ver roles |
 | Auditor administrativo | Solo ver usuarios y roles |
-| Roles clínicos, recepción, laboratorio y farmacia | Sin permisos administrativos hasta incorporar sus módulos funcionales |
+| Médico, Médico general, Médico especialista | Ver pacientes, registrar atenciones y consultar sus propias atenciones |
+| Enfermería, recepción, laboratorio y farmacia | Sin permisos hasta incorporar sus módulos funcionales |
 
 ### Permisos disponibles
 
@@ -299,6 +313,10 @@ operación manual exclusiva de la base local.
 | `usuarios:EDITAR` | Editar cuentas y activar/desactivar su estado |
 | `roles:VER` | Consultar el listado de roles |
 | `roles:EDITAR` | Crear/editar roles y asignar sus permisos, reservado al Administrador |
+| `auditoria:VER` | Consultar auditoría, reservado al Administrador |
+| `pacientes:VER` | Buscar pacientes y abrir sus fichas |
+| `pacientes:CREAR` / `pacientes:EDITAR` | Registrar/editar datos demográficos; no crea cuentas |
+| `atenciones:VER` / `atenciones:CREAR` | Consultar notas propias (todas para Administrador) / registrar una nueva atención; exige también `pacientes:VER` |
 
 El área filtra los roles disponibles, pero **no concede permisos** por sí misma.
 No existe un permiso independiente `roles:CREAR` en esta entrega. El rol denominado
@@ -425,7 +443,7 @@ SELECT COUNT(*) AS total_permisos FROM permisos;
 SELECT usuario, area FROM usuarios;
 ```
 
-En una instalación nueva deben existir 14 roles, 5 permisos y el usuario `admin`
+En una instalación nueva deben existir 14 roles, 11 permisos y el usuario `admin`
 en Administración. Con SQLyog o Workbench, ejecuta el contenido de los dos archivos
 en ese mismo orden dentro de `bd_hospital`; `SOURCE` es un comando del cliente
 `mysql`, no SQL estándar.

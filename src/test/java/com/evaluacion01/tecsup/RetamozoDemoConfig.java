@@ -1,9 +1,11 @@
 package com.evaluacion01.tecsup;
 
+import com.evaluacion01.tecsup.entity.Paciente;
 import com.evaluacion01.tecsup.entity.Permiso;
 import com.evaluacion01.tecsup.entity.Rol;
 import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.repository.PermisoRepository;
+import com.evaluacion01.tecsup.repository.PacienteRepository;
 import com.evaluacion01.tecsup.repository.RolRepository;
 import com.evaluacion01.tecsup.repository.UsuarioRepository;
 import org.springframework.boot.CommandLineRunner;
@@ -13,6 +15,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.sql.DataSource;
+import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
@@ -24,19 +27,24 @@ public class RetamozoDemoConfig {
 
     @Bean
     CommandLineRunner datosDemoRetamozo(DataSource dataSource, UsuarioRepository usuarios, RolRepository roles,
-                                       PermisoRepository permisos, PasswordEncoder encoder) {
+                                       PermisoRepository permisos, PacienteRepository pacientes, PasswordEncoder encoder) {
         return args -> {
             try (var conexion = dataSource.getConnection()) {
                 if (!conexion.getMetaData().getURL().startsWith("jdbc:h2:mem:") || usuarios.count() != 0) {
                     throw new IllegalStateException("La demostración requiere una base H2 en memoria vacía.");
                 }
             }
-            Permiso ver = permiso(permisos, "VER");
-            Permiso crear = permiso(permisos, "CREAR");
-            Permiso editar = permiso(permisos, "EDITAR");
+            Permiso ver = permiso(permisos, "usuarios", "VER");
+            Permiso crear = permiso(permisos, "usuarios", "CREAR");
+            Permiso editar = permiso(permisos, "usuarios", "EDITAR");
+            Permiso verPacientes = permiso(permisos, "pacientes", "VER");
+            permiso(permisos, "pacientes", "CREAR");
+            permiso(permisos, "pacientes", "EDITAR");
+            Permiso verAtenciones = permiso(permisos, "atenciones", "VER");
+            Permiso crearAtenciones = permiso(permisos, "atenciones", "CREAR");
             Rol admin = rol(roles, "Administrador", "Administración", true);
-            Rol medico = rol(roles, "Médico", "Medicina", true, ver);
-            Rol recepcion = rol(roles, "Recepcionista", "Recepción", true, ver);
+            Rol medico = rol(roles, "Médico", "Medicina", true, verPacientes, verAtenciones, crearAtenciones);
+            Rol recepcion = rol(roles, "Recepcionista", "Recepción", true);
             Rol coordinador = rol(roles, "Coordinador médico", "Medicina", true, ver, crear, editar);
             Rol apoyo = rol(roles, "Apoyo médico", "Medicina", false, ver);
             String clave = UUID.randomUUID().toString();
@@ -44,14 +52,20 @@ public class RetamozoDemoConfig {
             usuario(usuarios, encoder, "demoMedico", "Medicina", clave, medico, apoyo);
             usuario(usuarios, encoder, "demoRecepcion", "Recepción", clave, recepcion);
             usuario(usuarios, encoder, "demoEditor", "Medicina", clave, coordinador, medico);
+            Paciente paciente = new Paciente();
+            paciente.setNombres("Paciente");
+            paciente.setApellidos("Ficticio de demostración");
+            paciente.setDni("11223344");
+            paciente.setFechaNacimiento(LocalDate.of(2000, 1, 1));
+            pacientes.saveAndFlush(paciente);
             System.out.println("[DEMO H2] Usuarios: demoAdmin, demoMedico, demoRecepcion, demoEditor. Clave temporal: " + clave);
         };
     }
 
-    private Permiso permiso(PermisoRepository repository, String nombre) {
+    private Permiso permiso(PermisoRepository repository, String modulo, String nombre) {
         Permiso permiso = new Permiso();
         permiso.setNombre(nombre);
-        permiso.setModulo("usuarios");
+        permiso.setModulo(modulo);
         return repository.saveAndFlush(permiso);
     }
 

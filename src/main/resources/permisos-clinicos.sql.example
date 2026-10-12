@@ -1,0 +1,15 @@
+-- Importación MANUAL, después de schema.sql, en la base elegida explícitamente.
+-- No se ejecuta al arrancar, no crea cuentas y no revoca permisos anteriores.
+INSERT IGNORE INTO permisos (nombre, modulo) VALUES
+    ('VER', 'pacientes'),
+    ('CREAR', 'pacientes'),
+    ('EDITAR', 'pacientes'),
+    ('VER', 'atenciones'),
+    ('CREAR', 'atenciones');
+
+INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM roles r
+JOIN permisos p ON (p.modulo = 'pacientes' AND p.nombre = 'VER')
+    OR (p.modulo = 'atenciones' AND p.nombre IN ('VER', 'CREAR'))
+WHERE r.nombre IN ('Médico', 'Médico general', 'Médico especialista');

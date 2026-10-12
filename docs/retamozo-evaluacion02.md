@@ -102,8 +102,10 @@ y las tarjetas del dashboard usan los permisos actuales que recarga el backend,
 no una copia antigua de la sesión. El módulo actual tiene `aria-current="page"`.
 La barra conserva el comportamiento adaptable a pantallas pequeñas.
 
-La redirección de Sovero se conserva: Administrador → dashboard, permiso de
+La redirección administrativa de Sovero se conserva: Administrador → dashboard,
 consulta de usuarios → usuarios, consulta de roles → roles, sin módulos → dashboard.
+La extensión clínica posterior prioriza Pacientes para quien tiene `pacientes:VER`;
+se documenta por separado en [modulo-clinico.md](modulo-clinico.md).
 Ocultar enlaces no autoriza nada: se comprueban también URLs directas, formularios
 forjados y la revocación de permisos de una sesión anterior.
 
@@ -124,8 +126,8 @@ para detener la demostración, pulsa `Ctrl+C` en su terminal.
 Abre `http://127.0.0.1:8095/login`. La consola muestra una clave temporal aleatoria
 para `demoAdmin`, `demoMedico`, `demoRecepcion` y `demoEditor`. Son cuentas ficticias
 de esta ejecución, no credenciales SMTP. Los perfiles no administrativos tienen
-solo los permisos asignados en el fixture; los módulos clínicos del ejemplo del
-enunciado no se inventan ni se anuncian como implementados.
+solo los permisos asignados en el fixture. La extensión clínica solicitada después
+agrega Pacientes y Atenciones; no se anuncia como parte del enunciado original.
 
 Guion de evidencia:
 
@@ -134,11 +136,13 @@ Guion de evidencia:
 3. Crear/editar un rol; desactivarlo y reactivarlo desde `/roles`.
 4. Asignar/revocar permisos y observar la relación inversa en la misma pantalla.
 5. Consultar la bitácora y comprobar los IDs y operaciones de esos cambios.
-6. Entrar como Médico: consultar usuarios, sin formularios de administración ni
-   enlaces a roles/auditoría; probar también una URL administrativa directa.
+6. En la demo actual, entrar como Médico: consultar pacientes y registrar una
+   atención, sin enlaces de administración; probar también una URL administrativa.
 7. Entrar como Editor y editar su propia cuenta: sus roles y área quedan bloqueados.
 
-Comprobaciones realizadas desde el navegador el 11 de octubre, sobre H2 temporal:
+Comprobaciones originales del 11 de octubre sobre H2 temporal, **anteriores a la
+extensión clínica** (en ese fixture el Médico recibió `usuarios:VER` para probar
+una vista de solo consulta):
 
 | Flujo | Resultado observado |
 | --- | --- |
@@ -207,3 +211,8 @@ Los logs temporales con el token simulado **no se publican**. Con el dialecto My
 predeterminado Hibernate advierte sobre la versión anunciada por MariaDB; las
 comprobaciones realizadas son del motor y versión indicados, no una garantía de
 compatibilidad universal. La ejecución específicamente con MySQL 8 sigue pendiente.
+
+La ampliación posterior de esa misma base aislada con tablas y permisos clínicos
+se documenta en [modulo-clinico.md](modulo-clinico.md). El permiso demostrativo
+`Médico → usuarios:VER` se retiró allí; las verificaciones originales anteriores
+se conservan como historial, no como el comportamiento clínico actual.

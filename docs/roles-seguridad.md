@@ -85,7 +85,13 @@ devuelve los que falten (lista vacía si están los tres).
 | Administrador | Ver, crear, editar, activar/desactivar | Ver, crear, editar, activar/desactivar, asignar permisos | Consultar | `/dashboard` |
 | Coordinador administrativo | Ver, crear, editar, activar/desactivar (no cuentas administradoras) | Solo ver | Sin acceso | `/usuarios` |
 | Auditor administrativo | Solo ver | Solo ver | Sin acceso | `/usuarios` |
-| Médico, Recepcionista y demás roles hospitalarios | Sin acceso | Sin acceso | Sin acceso | `/dashboard` |
+| Médico, Médico general, Médico especialista | Sin acceso | Sin acceso | Sin acceso | `/pacientes` |
+| Recepcionista y demás roles hospitalarios | Sin acceso | Sin acceso | Sin acceso | `/dashboard` |
+
+La extensión de Leonel agrega consulta de pacientes y registro/consulta de
+atenciones propias para los médicos; Administrador conserva acceso total.
+Preparación y límites: [modulo-clinico.md](modulo-clinico.md). Esto no cambia la
+autoría ni la evidencia del backend de roles de Karim.
 
 Los permisos de la tabla son los de la semilla y el Administrador puede cambiarlos desde
 `/roles/{id}/permisos`. Crear, editar, activar/desactivar roles y asignar permisos queda
@@ -107,8 +113,9 @@ reservado al Administrador aunque otro rol reciba `roles:EDITAR`.
 - **Último administrador activo:** no se puede desactivar su cuenta, quitarle el rol
   Administrador ni desactivar el rol Administrador.
 - **Redirección posterior al login:** `AutorizacionService.rutaInicial()` envía al
-  Administrador al panel, a quien tiene `usuarios:VER` a `/usuarios`, a quien solo tiene
-  `roles:VER` a `/roles` y al resto al panel.
+  Administrador al panel, a quien tiene `pacientes:VER` a `/pacientes`, después
+  prioriza `usuarios:VER` → `/usuarios`, `roles:VER` → `/roles` y al resto al panel.
+  Los permisos se combinan también cuando el clínico es un rol adicional.
 
 ## Pruebas
 
