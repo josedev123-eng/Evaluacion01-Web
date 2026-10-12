@@ -184,6 +184,7 @@
     <tr>
         <th>ID</th>
         <th>Nombres</th>
+        <th>DNI</th>
         <th>Usuario</th>
         <th>Correo</th>
         <th>Roles</th>
@@ -195,6 +196,7 @@
     <tr th:each="u : ${listaUsuarios}">
         <td th:text="${u.idUsuario}"></td>
         <td class="table-primary-text" th:text="${u.nombres + ' ' + u.apellidos}"></td>
+        <td class="table-muted-text text-nowrap" th:text="${#strings.isEmpty(u.dni) ? 'Sin registrar' : u.dni}"></td>
         <td class="table-muted-text" th:text="${u.usuario}"></td>
         <td class="table-muted-text" th:text="${u.correo}"></td>
         <td>
@@ -222,7 +224,7 @@
         </td>
     </tr>
     <tr th:if="${#lists.isEmpty(listaUsuarios)}">
-        <td colspan="7" class="text-center text-muted" th:text="${hayFiltros} ? 'Ningún usuario coincide con los filtros' : 'No hay usuarios registrados'"></td>
+        <td colspan="8" class="text-center text-muted" th:text="${hayFiltros} ? 'Ningún usuario coincide con los filtros' : 'No hay usuarios registrados'"></td>
     </tr>
     </tbody>
 </table>

@@ -157,6 +157,38 @@ class UsuariosFrontendIntegrationTests {
         assertThat(vista.select("script:not([src])")).isEmpty();
     }
 
+    @Test
+    void listadoMuestraElDniRegistradoParaAdministradorYLectorYPermiteBuscarlo() throws Exception {
+        destino.setDni("01234567");
+        usuarios.flush();
+        for (Usuario operador : new Usuario[]{admin, lector}) {
+            Document vista = pagina("/usuarios?q=01234567", operador);
+            assertThat(vista.select("table.data-table thead th").eachText())
+                    .containsExactly("ID", "Nombres", "DNI", "Usuario", "Correo", "Roles", "Estado", "Acciones");
+            assertThat(vista.select("table.data-table tbody tr")).hasSize(1);
+            assertThat(vista.select("table.data-table tbody td").get(2).text()).isEqualTo("01234567");
+            assertThat(vista.select("table.data-table tbody").text()).contains(destino.getUsuario());
+        }
+    }
+
+    @Test
+    void dniNuloOVacioSeMuestraComoSinRegistrarSinInventarDatos() throws Exception {
+        destino.setDni(null);
+        lector.setDni("");
+        usuarios.flush();
+        for (Usuario cuenta : new Usuario[]{destino, lector}) {
+            Document vista = pagina("/usuarios?q=" + cuenta.getUsuario(), admin);
+            assertThat(vista.select("table.data-table tbody td").get(2).text()).isEqualTo("Sin registrar");
+        }
+    }
+
+    @Test
+    void listadoVacioOcupaLasOchoColumnasIncluyendoDni() throws Exception {
+        Document vista = pagina("/usuarios?q=cuentaInexistenteEnEstasPruebas", admin);
+        assertThat(vista.select("table.data-table tbody td[colspan=8]").text()).isEqualTo("Ningún usuario coincide con los filtros");
+        assertThat(vista.select("table.data-table tbody td[colspan=7]")).isEmpty();
+    }
+
     private Document pagina(String ruta, Usuario usuario) throws Exception {
         return Jsoup.parse(mvc.perform(get(ruta).session(sesion(usuario))).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());

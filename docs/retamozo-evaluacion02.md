@@ -95,6 +95,16 @@ La cabecera de un lector dice **Consulta de usuarios**, no **Registrar usuario**
 En edición propia solo aparecen los roles adicionales ya asignados, bloqueados,
 sin mostrar perfiles ajenos ni repetir el principal como adicional.
 
+El listado también muestra la columna **DNI** junto al nombre, coherente con la
+búsqueda por DNI ya existente. Si no se registró, aparece **Sin registrar**; el
+campo continúa siendo opcional para las cuentas de personal. No se inventan
+documentos ni se modifica el esquema o los datos guardados. El mensaje de lista
+vacía ocupa las ocho columnas actuales. Las regresiones de
+`UsuariosFrontendIntegrationTests` cubren DNI registrado (incluido cero inicial),
+consulta/búsqueda por administrador y lector, valores nulos/vacíos y lista vacía.
+La verificación completa posterior pasó **277 pruebas sin fallos, errores ni
+omisiones**; las 11 de vistas de usuarios incluyen esos tres casos de DNI.
+
 ## Pregunta 5 — Navegación según permisos (RF-ROL-03/RF-ROL-04)
 
 Las seis vistas administrativas comparten `fragments/navegacion.html`. El menú
