@@ -9,17 +9,7 @@
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body class="app-shell">
-<nav class="navbar navbar-expand app-navbar" aria-label="Navegación principal">
-    <div class="container">
-        <span class="navbar-brand"><i class="bi bi-heart-pulse-fill me-2"></i>Sistema Hospitalario</span>
-        <div class="navbar-nav">
-            <a class="nav-link text-white" th:href="@{/dashboard}"><i class="bi bi-grid-1x2 me-1"></i>Inicio</a>
-            <a th:if="${puedeVerUsuarios}" class="nav-link text-white" th:href="@{/usuarios}"><i class="bi bi-people me-1"></i>Usuarios</a>
-            <a th:if="${puedeVerRoles}" class="nav-link text-white is-current" th:href="@{/roles}"><i class="bi bi-shield-check me-1"></i>Roles</a>
-            <a class="nav-link text-white logout-link" th:href="@{/logout}"><i class="bi bi-box-arrow-right me-1"></i>Salir</a>
-        </div>
-    </div>
-</nav>
+<nav th:replace="~{fragments/navegacion :: barra('roles')}"></nav>
 <main class="app-main container py-4 py-lg-5" style="max-width: 880px;">
     <div class="page-hero">
         <div class="page-hero-copy">
@@ -35,13 +25,20 @@
             <h2 class="section-heading">Acciones disponibles</h2>
             <p class="section-description">Marca únicamente las operaciones necesarias para este rol.</p>
         </div>
-        <div th:each="permiso : ${permisos}" class="form-check permission-item">
+        <div th:each="permiso : ${permisos}" class="form-check permission-item" th:attr="data-permiso-id=${permiso.idPermiso}">
             <input class="form-check-input" type="checkbox" name="permisoIds"
                    th:value="${permiso.idPermiso}"
                    th:id="${'permiso-' + permiso.idPermiso}"
                    th:checked="${idsAsignados.contains(permiso.idPermiso)}">
-            <label class="form-check-label" th:for="${'permiso-' + permiso.idPermiso}"
-                   th:text="${#strings.capitalize(#strings.toLowerCase(permiso.modulo))} + ' - ' + ${#strings.capitalize(#strings.toLowerCase(permiso.nombre))}"></label>
+            <label class="form-check-label" th:for="${'permiso-' + permiso.idPermiso}">
+                <span class="d-block" th:text="${#strings.capitalize(#strings.toLowerCase(permiso.modulo))} + ' - ' + ${#strings.capitalize(#strings.toLowerCase(permiso.nombre))}"></span>
+                <small class="d-block text-muted fw-normal mt-2 roles-asociados">
+                    Roles que usan este permiso:
+                    <span th:if="${#sets.isEmpty(permiso.roles)}">Ninguno</span>
+                    <span th:each="r : ${permiso.roles}" class="badge bg-light text-dark border me-1"
+                          th:text="${r.nombre} + (${r.activo} ? '' : ' (inactivo)')"></span>
+                </small>
+            </label>
         </div>
 
         <div th:if="${#lists.isEmpty(permisos)}" class="text-muted text-center py-4">No hay permisos registrados</div>

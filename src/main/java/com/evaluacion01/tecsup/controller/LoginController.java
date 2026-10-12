@@ -1,7 +1,10 @@
 package com.evaluacion01.tecsup.controller;
 
+import com.evaluacion01.tecsup.audit.ModuloAuditoria;
 import com.evaluacion01.tecsup.entity.Usuario;
 import com.evaluacion01.tecsup.service.AuthService;
+import com.evaluacion01.tecsup.service.AuditoriaService;
+import com.evaluacion01.tecsup.service.AutorizacionService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -17,10 +20,16 @@ public class LoginController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private AuditoriaService auditoriaService;
+
+    @Autowired
+    private AutorizacionService autorizacionService;
+
     @GetMapping({"/", "/login"})
     public String showLoginForm(HttpSession session) {
-        if (session.getAttribute("usuarioLogueado") != null) {
-            return "redirect:/dashboard";
+        if (session.getAttribute("usuarioLogueado") instanceof Usuario usuario) {
+            return "redirect:" + autorizacionService.rutaInicial(usuario);
         }
         return "login";
     }
@@ -33,7 +42,8 @@ public class LoginController {
         try {
             Usuario usuario = authService.autenticar(identificador, contrasena);
             session.setAttribute("usuarioLogueado", usuario);
-            return "redirect:/dashboard";
+            // Redirección automática al módulo que corresponde según los roles del usuario.
+            return "redirect:" + autorizacionService.rutaInicial(usuario);
         } catch (Exception e) {
             model.addAttribute("error", e.getMessage());
             model.addAttribute("identificadorPrevio", identificador);
@@ -53,6 +63,11 @@ public class LoginController {
 
     @GetMapping("/logout")
     public String logout(HttpSession session, RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogueado");
+        if (usuario != null) {
+            auditoriaService.registrarExito(usuario, ModuloAuditoria.AUTENTICACION, "LOGOUT", "Usuario",
+                    usuario.getIdUsuario(), "Cierre de sesión");
+        }
         session.invalidate();
         redirectAttributes.addFlashAttribute("mensajeLogout", "Sesión cerrada correctamente.");
         return "redirect:/login";

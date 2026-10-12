@@ -1,17 +1,20 @@
 package com.evaluacion01.tecsup.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final AuditoriaAccesoDenegadoHandler auditoriaAccesoDenegadoHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -19,11 +22,14 @@ public class SecurityConfig {
     }
 
     // La autenticación de vistas se maneja con sesión HTTP propia (LoginController),
-    // por lo que Spring Security solo aporta el hash de contraseñas y deja pasar todas las rutas.
+    // por lo que los controladores/servicios comprueban permisos. Spring Security
+    // también exige CSRF en los formularios; Thymeleaf incluye el token automáticamente.
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf.ignoringRequestMatchers(
+                        "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"))
+                .exceptionHandling(ex -> ex.accessDeniedHandler(auditoriaAccesoDenegadoHandler))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
 
         return http.build();

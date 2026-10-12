@@ -2,6 +2,7 @@ INSERT IGNORE INTO roles (nombre, descripcion, area) VALUES
     ('Administrador', 'Gestión total del sistema, usuarios, roles y permisos', 'Administración'),
     ('Coordinador administrativo', 'Coordinación de procesos administrativos', 'Administración'),
     ('Auditor administrativo', 'Consulta y supervisión de la configuración administrativa', 'Administración'),
+    ('Médico', 'Historias clínicas, consultas y diagnósticos', 'Medicina'),
     ('Médico general', 'Atención médica general', 'Medicina'),
     ('Médico especialista', 'Atención médica especializada', 'Medicina'),
     ('Enfermero', 'Atención y cuidado de pacientes', 'Enfermería'),
@@ -18,7 +19,13 @@ INSERT IGNORE INTO permisos (nombre, modulo) VALUES
     ('CREAR', 'usuarios'),
     ('EDITAR', 'usuarios'),
     ('VER', 'roles'),
-    ('EDITAR', 'roles');
+    ('EDITAR', 'roles'),
+    ('VER', 'auditoria'),
+    ('VER', 'pacientes'),
+    ('CREAR', 'pacientes'),
+    ('EDITAR', 'pacientes'),
+    ('VER', 'atenciones'),
+    ('CREAR', 'atenciones');
 
 INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
@@ -35,8 +42,16 @@ WHERE r.nombre = 'Coordinador administrativo';
 INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
 FROM roles r
-JOIN permisos p ON p.nombre = 'VER' AND p.modulo IN ('usuarios', 'roles')
+JOIN permisos p ON p.nombre = 'VER' AND p.modulo IN ('usuarios', 'roles', 'auditoria')
 WHERE r.nombre = 'Auditor administrativo';
+
+-- Los médicos trabajan con pacientes, no con las cuentas del personal.
+INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM roles r
+JOIN permisos p ON (p.modulo = 'pacientes' AND p.nombre = 'VER')
+    OR (p.modulo = 'atenciones' AND p.nombre IN ('VER', 'CREAR'))
+WHERE r.nombre IN ('Médico', 'Médico general', 'Médico especialista');
 
 -- Usuario administrador de ejemplo: usuario=admin, contraseña=admin123
 INSERT IGNORE INTO usuarios (nombres, apellidos, correo, usuario, contrasena, estado, fecha_registro, id_rol)
@@ -45,3 +60,7 @@ SELECT 'Administrador', 'Sistema', 'admin@hospital.com', 'admin',
 FROM roles r
 WHERE r.nombre = 'Administrador'
 LIMIT 1;
+
+-- RF-USR-04: el rol principal de cada usuario también figura en usuario_roles
+INSERT IGNORE INTO usuario_roles (id_usuario, id_rol)
+SELECT id_usuario, id_rol FROM usuarios;
