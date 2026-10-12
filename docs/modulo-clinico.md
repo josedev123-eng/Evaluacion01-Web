@@ -36,6 +36,10 @@ impiden eliminar entidades referenciadas. Las asociaciones de las vistas se
 precargan mediante `EntityGraph`.
 
 El servidor determina fecha UTC y profesional desde la cuenta activa de la BD.
+`Atencion.fechaHora` usa `Instant`; `fechaHoraUtc` convierte ese instante a UTC
+solo para presentarlo en Thymeleaf. Así JDBC no reinterpreta un `LocalDateTime`
+UTC como hora local del equipo. El cambio se limita a Atenciones y conserva la
+columna `DATETIME(6)` y los mapeos de los módulos anteriores.
 El formulario no puede modificar esos campos, ni asignar IDs de atención o
 asociaciones anidadas. Se verifican permisos también en los servicios, CSRF,
 cuentas/roles inactivos, DNI único, fechas de nacimiento y límites de texto.
@@ -101,7 +105,7 @@ Estas consultas no muestran los textos clínicos ni documentos personales.
 
 ## Verificación
 
-El 11 de octubre de 2026, `ClinicaBackendIntegrationTests` pasó sus **21 pruebas**
+El 11 de octubre de 2026, `ClinicaBackendIntegrationTests` pasó sus **23 pruebas**
 con H2 en memoria: relaciones físicas, identidad/fecha del servidor, aislamiento
 por profesional, permisos, cuentas/roles inactivos, validaciones, binding seguro,
 CSRF, rutas sin sesión y auditoría sin textos clínicos.
@@ -110,4 +114,52 @@ CSRF, rutas sin sesión y auditoría sin textos clínicos.
 precarga de fechas, navegación, XSS, multirrol, revocación en sesiones existentes,
 aislamiento de notas, CSRF y ausencia de controles de gestión para el Médico.
 Las **5 pruebas** de navegación compartida también pasaron. La verificación
-completa y la del servidor SQL se documentarán al completar esos pasos.
+completa del 11 de octubre de 2026 terminó con **274 pruebas, sin fallos, errores
+ni omisiones**, usando JDK 21 y objetivo Java 17:
+
+```powershell
+.\mvnw.cmd -B verify "-Dspring.profiles.active=test"
+```
+
+Son las 231 pruebas anteriores (con navegación actualizada) y 43 nuevas clínicas,
+incluidas las dos regresiones del ajuste UTC. La última ejecución terminó a las
+19:21 con `BUILD SUCCESS`.
+El JAR se empaquetó correctamente; H2 y las cuentas de la demo siguen siendo
+exclusivos del classpath de pruebas. Una ejecución anterior se interrumpió al
+cerrar el equipo; este resultado corresponde a la repetición completa posterior.
+
+### Servidor SQL
+
+La base aislada `ev02_retamozo_prueba_20261011_130017_6d57a271` se amplió con las
+tablas `pacientes` y `atenciones`, sin modificar `bd_hospital`. En **MariaDB
+10.4.32 (XAMPP)** se comprobaron las siete claves foráneas del esquema, incluidas
+las dos nuevas, y rechazos reales de asociaciones a pacientes/profesionales
+inexistentes dentro de una transacción revertida.
+
+Las tres variantes de Médico tienen `pacientes:VER` y `atenciones:VER/CREAR`.
+Se retiró exclusivamente el permiso demostrativo `Médico → usuarios:VER` de esa
+base de prueba; los permisos personalizados de otras bases no se modifican.
+Se conservaron las dos cuentas activas anteriores y se añadieron los cinco
+permisos clínicos (11 en total). MySQL 8 sigue pendiente de verificación.
+
+El arranque del JAR utiliza `ddl-auto=validate`, inicialización SQL previa a JPA,
+la URL JDBC de esa base aislada y SMTP deshabilitado. En H2 y en el servidor SQL
+se completaron registro/edición de paciente, registro y consulta de atenciones,
+revisión administrativa y aislamiento entre cuentas; se rechazaron diagnóstico
+vacío (400), paciente inexistente (404), POST sin CSRF (403), registro/edición de
+pacientes por el Médico (403) y acceso sin sesión (login). El Médico entra a
+Pacientes y no conserva el acceso demostrativo a cuentas de personal.
+
+La auditoría persistió éxitos, fallos y denegaciones de ambos módulos sin DNI
+ni diagnósticos. La prueba SQL descubrió un desfase de cinco horas del mapeo
+inicial `LocalDateTime` con el conector; se cambió a `Instant` y se añadieron dos
+regresiones de instante/representación UTC y persistencia. Solo se corrigieron
+los dos registros ficticios creados por esa prueba, no fechas de otras tablas
+ni datos de `bd_hospital`.
+
+Se repitió el flujo contra el **JAR final** con `ddl-auto=validate`; las dos nuevas
+fechas físicas coincidieron con `UTC_TIMESTAMP()` (diferencia menor a 60 segundos),
+sin el desfase anterior. Al terminar la prueba había **2 cuentas activas, 1 paciente
+y 4 atenciones ficticias**. El Médico consulta únicamente las dos que registró;
+Administrador revisa las cuatro. La demo H2 auxiliar se apagó y la instancia SQL
+quedó en `http://127.0.0.1:8095`, con SMTP excluido y sin publicar logs temporales.

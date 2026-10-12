@@ -12,7 +12,7 @@
                 <p class="small text-secondary mb-0">Profesional: <span th:text="${atencion.medico.nombres} + ' ' + ${atencion.medico.apellidos}"></span>
                     (<span th:text="${atencion.medico.usuario}"></span>)</p>
             </div>
-            <span class="count-badge" th:text="${#temporals.format(atencion.fechaHora, 'dd/MM/yyyy HH:mm:ss')} + ' UTC'"></span>
+            <span class="count-badge" th:text="${#temporals.format(atencion.fechaHoraUtc, 'dd/MM/yyyy HH:mm:ss')} + ' UTC'"></span>
         </header>
         <dl class="mb-0">
             <dt class="small text-secondary">Motivo de consulta</dt>

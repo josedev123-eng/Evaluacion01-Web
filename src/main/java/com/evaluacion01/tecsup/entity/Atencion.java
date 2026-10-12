@@ -5,7 +5,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Entity
 @Table(name = "atenciones", indexes = {
@@ -30,7 +32,7 @@ public class Atencion {
     private Usuario medico;
 
     @Column(name = "fecha_hora", nullable = false, updatable = false)
-    private LocalDateTime fechaHora;
+    private Instant fechaHora;
 
     @Column(nullable = false, length = 250, updatable = false)
     private String motivo;
@@ -41,7 +43,7 @@ public class Atencion {
     @Column(length = 2000, updatable = false)
     private String indicaciones;
 
-    public Atencion(Paciente paciente, Usuario medico, LocalDateTime fechaHora,
+    public Atencion(Paciente paciente, Usuario medico, Instant fechaHora,
                     String motivo, String diagnostico, String indicaciones) {
         this.paciente = paciente;
         this.medico = medico;
@@ -49,5 +51,11 @@ public class Atencion {
         this.motivo = motivo;
         this.diagnostico = diagnostico;
         this.indicaciones = indicaciones;
+    }
+
+    // Instant conserva el momento real al enlazar JDBC, sin reinterpretarlo en
+    // la zona local del equipo. La vista presenta explícitamente UTC.
+    public LocalDateTime getFechaHoraUtc() {
+        return LocalDateTime.ofInstant(fechaHora, ZoneOffset.UTC);
     }
 }

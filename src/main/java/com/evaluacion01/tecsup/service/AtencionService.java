@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -58,7 +58,7 @@ public class AtencionService {
             Paciente paciente = encontrarPaciente(formulario.getIdPaciente());
             Usuario medico = usuarios.findById(operador.getIdUsuario()).filter(u -> Boolean.TRUE.equals(u.getEstado()))
                     .orElseThrow(() -> new AccessDeniedException("La cuenta ya no está activa."));
-            Atencion atencion = new Atencion(paciente, medico, LocalDateTime.now(auditoriaClock),
+            Atencion atencion = new Atencion(paciente, medico, Instant.now(auditoriaClock),
                     formulario.getMotivo(), formulario.getDiagnostico(), formulario.getIndicaciones());
             atenciones.saveAndFlush(atencion);
             auditoria.registrarExito(medico, ModuloAuditoria.ATENCIONES, "REGISTRAR_ATENCION", "Atencion", atencion.getIdAtencion(),

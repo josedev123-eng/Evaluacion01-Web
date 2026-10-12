@@ -13,7 +13,8 @@ activación/desactivación visual de roles y navegación según permisos.
 
 - Guía de código, pruebas y evidencia individual:
   [docs/retamozo-evaluacion02.md](docs/retamozo-evaluacion02.md).
-- Verificación automatizada: **231 pruebas** correctas con H2 en memoria.
+- Verificación automatizada actual: **274 pruebas** correctas con H2 en memoria
+  (incluidas 43 nuevas de Pacientes y Atenciones).
 - Demo aislada en Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-retamozo.ps1`.
   Abre `http://127.0.0.1:8095/login`; las cuentas ficticias y su clave temporal se
   muestran en consola. No modifica MySQL ni habilita SMTP.

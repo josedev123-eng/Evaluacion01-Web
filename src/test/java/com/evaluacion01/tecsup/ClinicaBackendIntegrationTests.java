@@ -25,7 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -126,7 +126,7 @@ class ClinicaBackendIntegrationTests {
         Usuario copia = new Usuario();
         copia.setIdUsuario(medico.getIdUsuario());
         copia.setUsuario("nombreForjado");
-        LocalDateTime antes = LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1);
+        Instant antes = Instant.now().minusSeconds(1);
         Atencion atencion = atenciones.registrar(copia, atencionForm());
         assertThat(atencion.getMedico().getUsuario()).isEqualTo(medico.getUsuario());
         assertThat(atencion.getFechaHora()).isAfterOrEqualTo(antes);
@@ -225,8 +225,24 @@ class ClinicaBackendIntegrationTests {
         assertThat(atencionesRepo.findAll()).singleElement().satisfies(a -> {
             assertThat(a.getMedico().getIdUsuario()).isEqualTo(medico.getIdUsuario());
             assertThat(a.getIdAtencion()).isNotEqualTo(999L);
-            assertThat(a.getFechaHora()).isAfter(LocalDateTime.of(2000, 1, 1, 0, 0));
+            assertThat(a.getFechaHora()).isAfter(Instant.parse("2000-01-01T00:00:00Z"));
         });
+    }
+
+    @Test
+    void fechaClinicaEsUnInstanteYLaVistaLoExpresaExplicitamenteEnUtc() {
+        Instant momento = Instant.parse("2026-10-11T23:30:00Z");
+        Atencion atencion = new Atencion(paciente, medico, momento, "Ficticio", "Ficticio", null);
+        assertThat(atencion.getFechaHora()).isEqualTo(momento);
+        assertThat(atencion.getFechaHoraUtc()).isEqualTo(LocalDateTime.of(2026, 10, 11, 23, 30));
+    }
+
+    @Test
+    void instanteSeConservaAlGuardarYRecargarDesdeJpa() {
+        Instant momento = Instant.parse("2026-10-11T23:30:00Z");
+        Atencion creada = atencionesRepo.saveAndFlush(new Atencion(paciente, medico, momento, "Ficticio", "Ficticio", null));
+        em.clear();
+        assertThat(atencionesRepo.findById(creada.getIdAtencion()).orElseThrow().getFechaHora()).isEqualTo(momento);
     }
 
     @Test
