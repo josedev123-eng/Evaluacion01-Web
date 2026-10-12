@@ -4,9 +4,9 @@ Proyecto Spring Boot que integra los 8 requerimientos de la Evaluación 01, cada
 desarrollado originalmente en una rama/zip independiente por un integrante distinto y
 fusionado aquí en una sola aplicación.
 
-## Evaluación 02 — integración de Retamozo
+## Evaluación 02 — entrega integrada
 
-Esta rama conserva el historial original e integra la entrega de Edu, que ya
+La entrega conserva el historial original e integra la rama de Edu, que ya
 incluye los cambios de José y Sovero. La entrega de Leonel añade la relación
 inversa `Permiso.roles`, consulta de roles asociados, formularios multirrol,
 activación/desactivación visual de roles y navegación según permisos.
@@ -23,6 +23,100 @@ activación/desactivación visual de roles y navegación según permisos.
   MySQL 8 sigue pendiente. El resto de este README conserva el contexto y las
   instrucciones de la Prueba 1.
 
+### Reparto de requisitos para la exposición
+
+Este es el **reparto de responsabilidades de Evaluación 02**. Complementa la
+Evaluación 01 y no cambia la autoría de los commits originales. Los códigos
+`RF-*` identifican funcionalidades del proyecto; las preguntas corresponden al
+enunciado de Evaluación 02.
+
+| Integrante | Preguntas que expone | Requisitos y responsabilidad |
+| --- | --- | --- |
+| **José Saith Rojas Condor** | **P1:** Usuario–Rol principal. **P3:** backend de usuarios. | **RF-USR-01/02/03/05:** registrar, listar, editar, activar/desactivar y buscar usuarios; validar datos, duplicados y referencias. Mantiene el rol principal y las reglas del servicio de usuarios. |
+| **Karim Alexander Sovero Campoverde** | **P1:** Rol–Permiso. **P3:** backend de roles. **P5:** autorización y redirección después del login. | **RF-ROL-01/02/03/04:** registrar/editar/listar roles, cambiar su estado, asignar/revocar permisos, combinar permisos de roles activos e impedir accesos indebidos y escalada de privilegios. |
+| **Edu Edward Galindo Huaman** | **P1:** Usuario–roles adicionales. **P2:** auditoría. Complemento multirrol de **P3**. | **RF-USR-04:** asignar y quitar roles adicionales sin perder el principal. **RF-AUD-01/02:** registrar operaciones críticas y permitir la consulta administrativa de la bitácora, conservando la base de auditoría existente. |
+| **Leonel Mathias Retamozo De la Cruz** | **P1:** Permiso–Rol, lado inverso. **P4:** frontend de usuarios y roles. Parte visual de **P5**. | Relación inversa de **RF-ROL-02**; interfaces de **RF-USR-01 a 05** y **RF-ROL-01/02**; navegación visual de **RF-ROL-03/04**. Formularios multirrol, listado con DNI, estado de cuentas/roles, consulta de roles asociados, pruebas de vistas e integración del trabajo del equipo. |
+
+**Límite entre aportes:** José conserva `Usuario.rol` y el backend general de
+usuarios; Edu se encarga de `Usuario.roles` y auditoría; Karim conserva
+`Rol.permisos`, las políticas de autorización y la ruta inicial; Leonel aporta
+`Permiso.roles`, las vistas y la navegación que consume esas políticas. El
+frontend no reemplaza las comprobaciones del backend.
+
+#### P1 — evidencia JPA individual de cada integrante
+
+El enunciado exige **como mínimo dos entidades relacionadas por alumno**. Cada
+uno debe presentar sus propias evidencias de código, relación física en la base
+y funcionamiento desde la aplicación. No exige entidades diferentes para cada
+integrante ni usar las cuatro anotaciones de relación cuando no corresponden.
+
+| Integrante | Entidades y anotación que explica | Relación física y comprobación |
+| --- | --- | --- |
+| José | [`Usuario.rol`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) → [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java), `@ManyToOne` con `@JoinColumn`. | FK **`usuarios.id_rol` → `roles.id_rol`**. Registrar/editar una cuenta y comprobar que su rol principal quedó persistido. |
+| Karim | [`Rol.permisos`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java) → [`Permiso`](src/main/java/com/evaluacion01/tecsup/entity/Permiso.java), `@ManyToMany` con `@JoinTable`. | Tabla **`rol_permisos`** y sus dos FK. Asignar/revocar un permiso y comprobar las filas, sin borrar el catálogo. |
+| Edu | [`Usuario.roles`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) → [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java), `@ManyToMany` con `@JoinTable`. | Tabla **`usuario_roles`** y sus dos FK. Añadir/quitar un rol adicional y comprobar que el principal se conserva. No hay cascadas que persistan o modifiquen roles compartidos. |
+| Leonel | [`Permiso.roles`](src/main/java/com/evaluacion01/tecsup/entity/Permiso.java) → [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java), `@ManyToMany(mappedBy = "permisos")`. | Reutiliza **`rol_permisos`**, sin otra tabla. Mostrar los roles asociados a un permiso antes/después de asignarlo desde el lado propietario `Rol.permisos`. |
+
+`AuditoriaLog` conserva la identidad del ejecutor como instantánea, sin una FK a
+Usuario que elimine o invalide su historial. La pareja JPA de Edu para P1 es
+**Usuario–Rol**, no una relación de auditoría que el modelo no implementa.
+
+#### Guion breve de demostración por integrante
+
+**José — usuarios y rol principal**
+1. Mostrar `Usuario.rol`, `UsuarioRepository` y `UsuarioServiceImpl`.
+2. Como Administrador, registrar una cuenta ficticia, buscarla por DNI/usuario,
+   editarla y desactivarla/reactivarla.
+3. Comprobar `usuarios.id_rol` en SQL; intentar un DNI duplicado o datos inválidos
+   y explicar por qué el servidor los rechaza.
+4. Evidencia automatizada: [`UsuarioGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuarioGestionIntegrationTests.java).
+
+**Karim — roles, permisos y seguridad**
+1. Mostrar `Rol.permisos`, `RolService` y `AutorizacionService`.
+2. Registrar/editar un rol, asignarle permisos y desactivarlo/reactivarlo;
+   comprobar `rol_permisos` y `roles.estado` en SQL.
+3. Iniciar sesión con una cuenta autorizada y otra restringida: probar también
+   una URL directa. Explicar permisos multirrol, roles inactivos, último
+   administrador y redirección posterior al login.
+4. Evidencia: [`RolPermisoRelacionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/RolPermisoRelacionIntegrationTests.java),
+   [`RolGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/RolGestionIntegrationTests.java),
+   [`SeguridadRolesIntegrationTests`](src/test/java/com/evaluacion01/tecsup/SeguridadRolesIntegrationTests.java)
+   y [guía de roles/seguridad](docs/roles-seguridad.md).
+
+**Edu — multirrol y auditoría**
+1. Mostrar `Usuario.roles`, asignación/remoción de roles adicionales y
+   `AuditoriaLog`/`AuditoriaService`.
+2. Añadir y quitar un rol de la misma área; comprobar `usuario_roles` y la
+   conservación del rol principal, sin modificar el catálogo compartido.
+3. Registrar/editar una cuenta o cambiar su estado y, como Administrador,
+   consultar Auditoría. Mostrar ejecutor, fecha/hora, acción, entidad, ID y
+   resultado; comprobar que no se guardan claves ni tokens.
+4. Mostrar una operación rechazada y sus filtros de consulta. No se demuestra
+   eliminación física: este sistema usa activación/desactivación y conserva el
+   historial. La recuperación sigue simulada, con token solo en consola.
+5. Evidencia: [`MultirrolIntegracionTests`](src/test/java/com/evaluacion01/tecsup/MultirrolIntegracionTests.java),
+   pruebas `Auditoria*IntegrationTests` y [guía de auditoría](docs/auditoria.md).
+
+**Leonel — frontend, relación inversa e integración**
+1. Mostrar `Permiso.roles`, el formulario de usuarios, las vistas de roles y
+   `fragments/navegacion.html`.
+2. Demostrar selección de área/rol principal/adicionales, columna DNI y controles
+   de edición/estado; comparar la vista de Administrador con una de solo consulta.
+3. En Roles → Permisos, mostrar la consulta inversa de roles asociados y su cambio
+   al guardar la asignación desde el backend de Karim.
+4. Comparar menús y opciones permitidas, sin presentar botones ocultos como única
+   medida de seguridad. Mostrar pruebas de vistas y el historial Git conservado.
+5. Evidencia: [`PermisoRolInversoIntegrationTests`](src/test/java/com/evaluacion01/tecsup/PermisoRolInversoIntegrationTests.java),
+   [`UsuariosFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuariosFrontendIntegrationTests.java),
+   [`RolesFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/RolesFrontendIntegrationTests.java),
+   [`NavegacionFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/NavegacionFrontendIntegrationTests.java)
+   y [guía individual de Retamozo](docs/retamozo-evaluacion02.md).
+
+Para la exposición conjunta: **código → tabla/FK en SQL → operación en la
+aplicación → prueba positiva y rechazo de un caso inválido**. Las 277 pruebas
+automatizadas usan H2; la ejecución SQL comprobada es MariaDB 10.4.32, no MySQL 8.
+No presentar SMTP real ni módulos todavía pendientes como implementados.
+
 ### Extensión clínica: Pacientes y Atenciones
 
 El Médico ahora consulta pacientes y registra atenciones con su cuenta y la fecha
@@ -34,6 +128,21 @@ Guía de permisos, preparación y demostración:
 [docs/modulo-clinico.md](docs/modulo-clinico.md). Se conservan autorización multirrol,
 CSRF, auditoría sin textos clínicos y recuperación simulada. No se incluyen citas
 ni funciones de recepción; utiliza exclusivamente datos ficticios.
+
+**Responsable de esta extensión solicitada después del reparto:** Leonel,
+durante la integración. No sustituye las evidencias individuales anteriores.
+
+| Requisito adicional | Qué se expone |
+| --- | --- |
+| **RF-PAC-01** | Registro/edición de datos demográficos de pacientes con validaciones y DNI único. Pacientes no son cuentas de acceso. |
+| **RF-PAC-02** | Búsqueda y ficha de pacientes; acceso según permisos, con navegación clínica. |
+| **RF-ATE-01** | Registro de atención con profesional autenticado y fecha UTC del servidor. Cada Médico ve sus propias notas; Administrador puede revisar todas. No hay edición/eliminación de atenciones. |
+
+Estos códigos documentan una ampliación del proyecto, **no nuevos puntos
+obligatorios del enunciado**. Médico/general/especialista comparten esas funciones
+en esta versión; Enfermería, Recepción, Laboratorio y Farmacia aún no tienen
+módulos propios. Las cuentas de prueba creadas en la base local no se copian
+mediante Git ni forman parte de una semilla automática.
 
 ## Alcance de esta entrega
 
@@ -130,7 +239,9 @@ existente (incluyendo cambiar su contraseña o su rol) sin crear uno nuevo.
 - No se puede desactivar la propia cuenta ni al último administrador activo ([`UsuarioServiceImpl.cambiarEstado()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java)).
 
 ### RF-USR-04 — Asignar múltiples roles a un usuario
-**Responsable:** Jose Rojas Condor
+**Responsable de multirrol en Evaluación 02:** Galindo Huaman Edu Edward.
+**Frontend e integración:** Retamozo De la Cruz Leonel Mathias.
+**Unión de permisos y autorización:** Sovero Campoverde Karim Alexander.
 **Para qué sirve:** un mismo usuario puede tener varios roles de su área (por ejemplo, Médico general y Médico especialista).
 **Dónde está:**
 - [`Usuario.roles`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) (tabla `usuario_roles` en [`schema.sql`](src/main/resources/schema.sql)). `usuarios.id_rol` se mantiene como **rol principal** y siempre está incluido en `roles`. `getRolesAsignados()` devuelve el principal primero y luego los demás.
