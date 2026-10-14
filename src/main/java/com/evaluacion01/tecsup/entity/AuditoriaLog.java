@@ -2,6 +2,7 @@ package com.evaluacion01.tecsup.entity;
 
 import com.evaluacion01.tecsup.audit.ModuloAuditoria;
 import com.evaluacion01.tecsup.audit.ResultadoAuditoria;
+import com.evaluacion01.tecsup.audit.ZonaHoraria;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -66,6 +67,11 @@ public class AuditoriaLog {
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 10, updatable = false)
     private ResultadoAuditoria resultado;
+
+    // Se guarda en UTC; la vista muestra la hora de Lima.
+    public LocalDateTime getFechaHoraLocal() {
+        return ZonaHoraria.utcALima(fechaHora);
+    }
 
     public AuditoriaLog(LocalDateTime fechaHora, Long idUsuarioEjecutor, String usuarioEjecutor,
                         ModuloAuditoria modulo, String accion, String entidad, Long idEntidad, String detalle,

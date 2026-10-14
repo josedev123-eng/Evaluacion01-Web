@@ -178,10 +178,19 @@ class AuditoriaConsultaIntegrationTests {
     }
 
     @Test
-    void laFechaFinalNoIncluyeLaMedianocheDelDiaSiguiente() throws Exception {
-        Page<AuditoriaLog> pagina = pagina(get("/auditoria").param("desde", "2026-10-03").param("hasta", "2026-10-03"));
+    void lasFechasDelFiltroSeInterpretanEnHoraDeLima() throws Exception {
+        // Guardados en UTC: 02/10 23:59:59 y 03/10 00:00:00 son 02/10 18:59:59 y 02/10 19:00:00 en Lima.
+        Page<AuditoriaLog> pagina = pagina(get("/auditoria").param("desde", "2026-10-02").param("hasta", "2026-10-02"));
         assertThat(pagina.getContent()).extracting(AuditoriaLog::getIdAuditoria)
-                .containsExactly(cuarto.getIdAuditoria(), tercero.getIdAuditoria());
+                .containsExactly(cuarto.getIdAuditoria(), tercero.getIdAuditoria(), segundo.getIdAuditoria());
+    }
+
+    @Test
+    void laFechaFinalNoIncluyeLaMedianocheDelDiaSiguienteEnLima() throws Exception {
+        // 03/10 00:00 en Lima es 03/10 05:00 UTC: ningún evento de la semilla cae justo ahí,
+        // y el día 03/10 de Lima no debe incluir a los de la noche del 02/10.
+        Page<AuditoriaLog> pagina = pagina(get("/auditoria").param("desde", "2026-10-03").param("hasta", "2026-10-03"));
+        assertThat(pagina.getContent()).isEmpty();
     }
 
     @ParameterizedTest

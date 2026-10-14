@@ -15,7 +15,7 @@
         <div class="page-hero-copy">
             <p class="auth-kicker mb-1">Administración · RF-AUD-02</p>
             <h1 class="page-heading">Consulta de auditoría</h1>
-            <p class="page-subtitle">Historial de operaciones críticas. Fechas y filtros en UTC.</p>
+            <p class="page-subtitle">Historial de operaciones críticas. Fechas y filtros en hora de Lima.</p>
         </div>
         <div class="page-hero-icon"><i class="bi bi-journal-check"></i></div>
     </div>
@@ -41,11 +41,11 @@
                 </select>
             </div>
             <div class="col-md-4">
-                <label for="desde" class="form-label">Desde (UTC)</label>
+                <label for="desde" class="form-label">Desde (hora de Lima)</label>
                 <input id="desde" class="form-control" type="date" th:field="*{desde}" min="1900-01-01" max="9998-12-31">
             </div>
             <div class="col-md-4">
-                <label for="hasta" class="form-label">Hasta (UTC)</label>
+                <label for="hasta" class="form-label">Hasta (hora de Lima)</label>
                 <input id="hasta" class="form-control" type="date" th:field="*{hasta}" min="1900-01-01" max="9998-12-31">
             </div>
             <div class="col-md-4">
@@ -65,10 +65,10 @@
         </div>
         <div class="table-responsive">
             <table class="table data-table align-middle">
-                <thead><tr><th>ID / Fecha UTC</th><th>Ejecutor</th><th>Módulo / Acción</th><th>Entidad</th><th>Resultado</th><th>Detalle</th><th>Origen</th></tr></thead>
+                <thead><tr><th>ID / Fecha (Lima)</th><th>Ejecutor</th><th>Módulo / Acción</th><th>Entidad</th><th>Resultado</th><th>Detalle</th><th>Origen</th></tr></thead>
                 <tbody>
                 <tr th:each="registro : ${paginaAuditoria.content}">
-                    <td class="text-nowrap"><span th:text="${registro.idAuditoria}"></span><br><small th:text="${#temporals.format(registro.fechaHora, 'dd/MM/yyyy HH:mm:ss')}"></small></td>
+                    <td class="text-nowrap"><span th:text="${registro.idAuditoria}"></span><br><small th:text="${#temporals.format(registro.fechaHoraLocal, 'dd/MM/yyyy HH:mm:ss')}"></small></td>
                     <td><strong th:text="${registro.usuarioEjecutor}"></strong><br><small class="text-muted" th:if="${registro.idUsuarioEjecutor != null}" th:text="'Cuenta #' + ${registro.idUsuarioEjecutor}"></small></td>
                     <td><span th:text="${registro.modulo}"></span><br><small th:text="${registro.accion}"></small></td>
                     <td><span th:text="${registro.entidad ?: '—'}"></span><br><small th:if="${registro.idEntidad != null}" th:text="'#' + ${registro.idEntidad}"></small></td>

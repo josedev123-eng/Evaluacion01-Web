@@ -1,6 +1,7 @@
 package com.evaluacion01.tecsup.service;
 
 import com.evaluacion01.tecsup.audit.ModuloAuditoria;
+import com.evaluacion01.tecsup.audit.ZonaHoraria;
 import com.evaluacion01.tecsup.dto.AuditoriaFiltroDto;
 import com.evaluacion01.tecsup.entity.AuditoriaLog;
 import com.evaluacion01.tecsup.entity.Usuario;
@@ -55,10 +56,12 @@ public class AuditoriaConsultaService {
                 condiciones.add(cb.like(cb.lower(root.get("usuarioEjecutor")), "%" + texto + "%", '\\'));
             }
             if (filtro.getDesde() != null) {
-                condiciones.add(cb.greaterThanOrEqualTo(root.get("fechaHora"), filtro.getDesde().atStartOfDay()));
+                condiciones.add(cb.greaterThanOrEqualTo(root.get("fechaHora"),
+                        ZonaHoraria.inicioDelDiaEnUtc(filtro.getDesde())));
             }
             if (filtro.getHasta() != null) {
-                condiciones.add(cb.lessThan(root.get("fechaHora"), filtro.getHasta().plusDays(1).atStartOfDay()));
+                condiciones.add(cb.lessThan(root.get("fechaHora"),
+                        ZonaHoraria.inicioDelDiaEnUtc(filtro.getHasta().plusDays(1))));
             }
             return cb.and(condiciones.toArray(Predicate[]::new));
         };

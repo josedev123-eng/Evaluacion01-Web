@@ -33,7 +33,7 @@
     </section>
     <section th:if="${puedeRegistrarAtencion}" class="content-card p-4 mb-4" aria-labelledby="nuevaAtencion">
         <h2 id="nuevaAtencion" class="h5 fw-bold">Registrar atención</h2>
-        <p class="small text-secondary">Se firmará con tu cuenta y la fecha UTC del servidor. Revisa los datos: una atención guardada no se edita ni se elimina.</p>
+        <p class="small text-secondary">Se firmará con tu cuenta y la fecha y hora del servidor. Revisa los datos: una atención guardada no se edita ni se elimina.</p>
         <form th:action="@{/atenciones/guardar}" th:object="${atencionForm}" method="post" autocomplete="off">
             <input type="hidden" th:field="*{idPaciente}">
             <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger" role="alert">

@@ -1,5 +1,6 @@
 package com.evaluacion01.tecsup.entity;
 
+import com.evaluacion01.tecsup.audit.ZonaHoraria;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -57,5 +58,9 @@ public class Atencion {
     // la zona local del equipo. La vista presenta explícitamente UTC.
     public LocalDateTime getFechaHoraUtc() {
         return LocalDateTime.ofInstant(fechaHora, ZoneOffset.UTC);
+    }
+
+    public LocalDateTime getFechaHoraLocal() {
+        return LocalDateTime.ofInstant(fechaHora, ZonaHoraria.LIMA);
     }
 }
