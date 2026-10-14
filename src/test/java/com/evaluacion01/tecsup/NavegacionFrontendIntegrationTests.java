@@ -65,7 +65,7 @@ class NavegacionFrontendIntegrationTests {
         for (var ruta : rutas.entrySet()) {
             Document vista = pagina(ruta.getKey(), sesion(admin));
             assertThat(vista.select("nav[aria-label='Navegación principal'] a").eachAttr("href"))
-                    .containsExactly("/dashboard", "/pacientes", "/atenciones", "/usuarios", "/roles", "/auditoria", "/logout");
+                    .containsExactly("/dashboard", "/pacientes", "/atenciones", "/citas", "/usuarios", "/roles", "/auditoria", "/logout");
             assertThat(vista.select("nav a[aria-current=page]").eachAttr("href")).containsExactly(ruta.getValue());
         }
     }

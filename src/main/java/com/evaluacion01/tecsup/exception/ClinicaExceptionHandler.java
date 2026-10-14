@@ -1,6 +1,7 @@
 package com.evaluacion01.tecsup.exception;
 
 import com.evaluacion01.tecsup.controller.AtencionController;
+import com.evaluacion01.tecsup.controller.CitaController;
 import com.evaluacion01.tecsup.controller.PacienteController;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
-@ControllerAdvice(assignableTypes = {PacienteController.class, AtencionController.class})
+@ControllerAdvice(assignableTypes = {PacienteController.class, AtencionController.class, CitaController.class})
 public class ClinicaExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)

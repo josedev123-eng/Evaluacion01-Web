@@ -1,9 +1,10 @@
 package com.evaluacion01.tecsup.audit;
 
 public enum ModuloAuditoria {
-    AUTENTICACION, USUARIOS, ROLES, PERMISOS, AUDITORIA, PACIENTES, ATENCIONES;
+    AUTENTICACION, USUARIOS, ROLES, PERMISOS, AUDITORIA, PACIENTES, ATENCIONES, CITAS;
 
     public static ModuloAuditoria deRuta(String ruta) {
+        if (ruta.equals("/citas") || ruta.startsWith("/citas/")) return CITAS;
         if (ruta.equals("/pacientes") || ruta.startsWith("/pacientes/")) return PACIENTES;
         if (ruta.equals("/atenciones") || ruta.startsWith("/atenciones/")) return ATENCIONES;
         if (ruta.equals("/auditoria") || ruta.startsWith("/auditoria/")) return AUDITORIA;

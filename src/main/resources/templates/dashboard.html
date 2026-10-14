@@ -38,6 +38,13 @@
                         <i class="bi bi-arrow-right ms-auto"></i>
                     </a>
                 </div>
+                <div th:if="${puedeVerCitas}" class="col-md-6">
+                    <a th:href="@{/citas}" class="dashboard-action">
+                        <span class="dashboard-action-icon"><i class="bi bi-calendar2-check"></i></span>
+                        <span>Citas<br><small class="fw-normal text-secondary">Programar y consultar la agenda</small></span>
+                        <i class="bi bi-arrow-right ms-auto"></i>
+                    </a>
+                </div>
                 <div th:if="${puedeVerUsuarios}" class="col-md-6">
                     <a th:href="@{/usuarios}" class="dashboard-action">
                         <span class="dashboard-action-icon"><i class="bi bi-people-fill"></i></span>
@@ -59,7 +66,7 @@
                         <i class="bi bi-arrow-right ms-auto"></i>
                     </a>
                 </div>
-                <div th:if="${!puedeVerPacientes and !puedeVerAtenciones and !puedeVerUsuarios and !puedeVerRoles and !puedeVerAuditoria}" class="col-12 text-muted">
+                <div th:if="${!puedeVerPacientes and !puedeVerAtenciones and !puedeVerCitas and !puedeVerUsuarios and !puedeVerRoles and !puedeVerAuditoria}" class="col-12 text-muted">
                     Tu rol no tiene acceso a otras secciones del sistema.
                 </div>
             </div>

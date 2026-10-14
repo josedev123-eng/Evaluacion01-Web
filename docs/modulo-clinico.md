@@ -22,7 +22,8 @@ extensión; no se presentan como requisitos nuevos del enunciado original.
 - Médico: `pacientes:VER`, `atenciones:VER` y `atenciones:CREAR`.
 - Las consultas de atenciones se filtran en la BD por el usuario actual; cada
   Médico solo ve sus registros. Administrador puede consultar todos.
-- No se incluyen citas, recepción, recetas, medicamentos, adjuntos ni eliminación
+- Las citas y el acceso de Recepción están descritos en el README (RF-CIT-01 a 03).
+- No se incluyen recetas, medicamentos, adjuntos ni eliminación
   o edición de atenciones. Una atención conserva la cuenta autora y se agrega al
   historial; no implementa una firma digital criptográfica.
 - Las listas muestran hasta 100 resultados, en orden estable.

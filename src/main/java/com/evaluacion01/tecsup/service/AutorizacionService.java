@@ -56,6 +56,9 @@ public class AutorizacionService {
         if (tienePermisoActual(actual, "pacientes", "VER")) {
             return "/pacientes";
         }
+        if (tienePermisoActual(actual, "citas", "VER")) {
+            return "/citas";
+        }
         if (tienePermisoActual(actual, "usuarios", "VER")) {
             return "/usuarios";
         }

@@ -113,3 +113,47 @@ CREATE TABLE IF NOT EXISTS atenciones (
     INDEX idx_atencion_paciente_fecha (id_paciente, fecha_hora, id_atencion),
     INDEX idx_atencion_medico_fecha (id_medico, fecha_hora, id_atencion)
 );
+
+-- RF-CIT-01: citas. Recepción las programa; no se eliminan, solo cambian de estado.
+CREATE TABLE IF NOT EXISTS citas (
+    id_cita BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_paciente BIGINT NOT NULL,
+    id_medico BIGINT NOT NULL,
+    id_registrado_por BIGINT NOT NULL,
+    fecha_hora DATETIME(6) NOT NULL,
+    motivo VARCHAR(250) NOT NULL,
+    estado VARCHAR(15) NOT NULL,
+    CONSTRAINT fk_cita_paciente FOREIGN KEY (id_paciente) REFERENCES pacientes (id_paciente),
+    CONSTRAINT fk_cita_medico FOREIGN KEY (id_medico) REFERENCES usuarios (id_usuario),
+    CONSTRAINT fk_cita_registrado_por FOREIGN KEY (id_registrado_por) REFERENCES usuarios (id_usuario),
+    INDEX idx_cita_fecha (fecha_hora, id_cita),
+    INDEX idx_cita_medico_fecha (id_medico, fecha_hora)
+);
+
+-- Acceso de Recepción a Pacientes y Citas (Evaluación 02, P5) y de los médicos a sus citas.
+-- Se aplica UNA sola vez: solo mientras no exista ningún permiso del módulo 'citas'.
+-- Después no vuelve a asignar nada, así que lo que un Administrador revoque se respeta.
+SET @primera_vez_citas = (SELECT COUNT(*) = 0 FROM permisos WHERE modulo = 'citas');
+
+INSERT IGNORE INTO permisos (nombre, modulo)
+SELECT v.nombre, v.modulo FROM (
+    SELECT 'VER' AS nombre, 'citas' AS modulo
+    UNION ALL SELECT 'CREAR', 'citas'
+    UNION ALL SELECT 'EDITAR', 'citas'
+    UNION ALL SELECT 'VER', 'pacientes'
+    UNION ALL SELECT 'CREAR', 'pacientes'
+    UNION ALL SELECT 'EDITAR', 'pacientes'
+) v
+WHERE @primera_vez_citas;
+
+INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM roles r
+JOIN permisos p ON p.modulo IN ('pacientes', 'citas') AND p.nombre IN ('VER', 'CREAR', 'EDITAR')
+WHERE @primera_vez_citas AND r.nombre = 'Recepcionista';
+
+INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM roles r
+JOIN permisos p ON p.modulo = 'citas' AND p.nombre = 'VER'
+WHERE @primera_vez_citas AND r.nombre LIKE 'Médico%';

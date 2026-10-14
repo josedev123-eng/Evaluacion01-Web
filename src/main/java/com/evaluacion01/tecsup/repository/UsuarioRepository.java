@@ -33,6 +33,20 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
             """)
     long contarActivosConRol(@Param("nombreRol") String nombreRol);
 
+    // Cuentas activas que, por su rol principal o adicional activo, tienen un permiso concreto.
+    @Query("""
+            SELECT DISTINCT u FROM Usuario u
+            WHERE u.estado = true
+              AND (EXISTS (SELECT 1 FROM Rol r JOIN r.permisos p
+                           WHERE r.idRol = u.rol.idRol AND r.estado = true
+                             AND LOWER(p.modulo) = :modulo AND LOWER(p.nombre) = :permiso)
+                   OR EXISTS (SELECT 1 FROM Usuario u2 JOIN u2.roles r2 JOIN r2.permisos p2
+                              WHERE u2.idUsuario = u.idUsuario AND r2.estado = true
+                                AND LOWER(p2.modulo) = :modulo AND LOWER(p2.nombre) = :permiso))
+            ORDER BY u.apellidos, u.nombres
+            """)
+    List<Usuario> activosConPermiso(@Param("modulo") String modulo, @Param("permiso") String permiso);
+
     // RF-USR-05: búsqueda por texto (nombres, apellidos, DNI, correo o usuario) y filtros
     // opcionales por área, rol (principal o adicional) y estado. Un parámetro null no filtra.
     @Query("""

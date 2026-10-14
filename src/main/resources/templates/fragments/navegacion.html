@@ -14,6 +14,9 @@
             <a th:if="${puedeVerAtenciones}" class="nav-link text-white" th:classappend="${activo == 'atenciones'} ? 'is-current'"
                th:attr="aria-current=${activo == 'atenciones' ? 'page' : null}" th:href="@{/atenciones}">
                 <i class="bi bi-clipboard2-pulse me-1" aria-hidden="true"></i>Atenciones</a>
+            <a th:if="${puedeVerCitas}" class="nav-link text-white" th:classappend="${activo == 'citas'} ? 'is-current'"
+               th:attr="aria-current=${activo == 'citas' ? 'page' : null}" th:href="@{/citas}">
+                <i class="bi bi-calendar2-check me-1" aria-hidden="true"></i>Citas</a>
             <a th:if="${puedeVerUsuarios}" class="nav-link text-white" th:classappend="${activo == 'usuarios'} ? 'is-current'"
                th:attr="aria-current=${activo == 'usuarios' ? 'page' : null}" th:href="@{/usuarios}">
                 <i class="bi bi-people me-1" aria-hidden="true"></i>Usuarios</a>

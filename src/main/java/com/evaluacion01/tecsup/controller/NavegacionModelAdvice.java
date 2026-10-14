@@ -22,7 +22,8 @@ public class NavegacionModelAdvice {
         model.addAttribute("puedeVerPacientes", puedeVerPacientes);
         model.addAttribute("puedeVerAtenciones", puedeVerPacientes
                 && autorizacionService.tienePermiso(usuario, "atenciones", "VER"));
-        model.addAttribute("puedeVerUsuarios", autorizacionService.tienePermiso(usuario, "usuarios", "VER"));
+        model.addAttribute("puedeVerCitas", autorizacionService.tienePermiso(usuario, "citas", "VER"));
+        model.addAttribute("puedeVerUsuarios",autorizacionService.tienePermiso(usuario, "usuarios", "VER"));
         model.addAttribute("puedeVerRoles", autorizacionService.tienePermiso(usuario, "roles", "VER"));
         model.addAttribute("puedeVerAuditoria", autorizacionService.esAdministrador(usuario));
     }

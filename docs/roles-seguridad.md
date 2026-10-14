@@ -86,7 +86,8 @@ devuelve los que falten (lista vacía si están los tres).
 | Coordinador administrativo | Ver, crear, editar, activar/desactivar (no cuentas administradoras) | Solo ver | Sin acceso | `/usuarios` |
 | Auditor administrativo | Solo ver | Solo ver | Sin acceso | `/usuarios` |
 | Médico, Médico general, Médico especialista | Sin acceso | Sin acceso | Sin acceso | `/pacientes` |
-| Recepcionista y demás roles hospitalarios | Sin acceso | Sin acceso | Sin acceso | `/dashboard` |
+| Recepcionista | Sin acceso | Sin acceso | Sin acceso | `/pacientes` (accede a Pacientes y Citas) |
+| Demás roles hospitalarios | Sin acceso | Sin acceso | Sin acceso | `/dashboard` |
 
 La extensión de Leonel agrega consulta de pacientes y registro/consulta de
 atenciones propias para los médicos; Administrador conserva acceso total.

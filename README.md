@@ -1,715 +1,313 @@
-# Evaluacion01-Web — Sistema Hospitalario (Tecsup)
+# Sistema Hospitalario — Evaluación 02
 
-Proyecto Spring Boot que integra los 8 requerimientos de la Evaluación 01, cada uno
-desarrollado originalmente en una rama/zip independiente por un integrante distinto y
-fusionado aquí en una sola aplicación.
+Aplicación web con Spring Boot, Hibernate/JPA, Thymeleaf y MySQL/MariaDB. Parte del
+proyecto de la Evaluación 01 e incorpora lo que pide el enunciado de la
+**Evaluación N° 02 (Sistema de Gestión de Pedidos / aplicaciones web avanzado)**:
+relaciones JPA, auditoría, gestión de usuarios y roles, frontend y control de acceso.
 
-## Evaluación 02 — entrega integrada
+## Qué pide el enunciado y quién lo expone
 
-La entrega conserva el historial original e integra la rama de Edu, que ya
-incluye los cambios de José y Sovero. La entrega de Leonel añade la relación
-inversa `Permiso.roles`, consulta de roles asociados, formularios multirrol,
-activación/desactivación visual de roles y navegación según permisos.
-
-- Guía de código, pruebas y evidencia individual:
-  [docs/retamozo-evaluacion02.md](docs/retamozo-evaluacion02.md).
-- Verificación automatizada actual: **277 pruebas** correctas con H2 en memoria
-  (incluidas 43 de Pacientes y Atenciones y 3 de la columna DNI en Usuarios).
-- Demo aislada en Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-retamozo.ps1`.
-  Abre `http://127.0.0.1:8095/login`; las cuentas ficticias y su clave temporal se
-  muestran en consola. No modifica MySQL ni habilita SMTP.
-- Servidor SQL local comprobado: **MariaDB 10.4.32 (XAMPP)**, sobre una base
-  separada y con validación del esquema JPA. La ejecución específicamente con
-  MySQL 8 sigue pendiente. El resto de este README conserva el contexto y las
-  instrucciones de la Prueba 1.
-
-### Reparto de requisitos para la exposición
-
-Este es el **reparto de responsabilidades de Evaluación 02**. Complementa la
-Evaluación 01 y no cambia la autoría de los commits originales. Los códigos
-`RF-*` identifican funcionalidades del proyecto; las preguntas corresponden al
-enunciado de Evaluación 02.
-
-| Integrante | Preguntas que expone | Requisitos y responsabilidad |
+| Pregunta | Qué pide | Quién la expone |
 | --- | --- | --- |
-| **José Saith Rojas Condor** | **P1:** Usuario–Rol principal. **P3:** backend de usuarios. | **RF-USR-01/02/03/05:** registrar, listar, editar, activar/desactivar y buscar usuarios; validar datos, duplicados y referencias. Mantiene el rol principal y las reglas del servicio de usuarios. |
-| **Karim Alexander Sovero Campoverde** | **P1:** Rol–Permiso. **P3:** backend de roles. **P5:** autorización y redirección después del login. | **RF-ROL-01/02/03/04:** registrar/editar/listar roles, cambiar su estado, asignar/revocar permisos, combinar permisos de roles activos e impedir accesos indebidos y escalada de privilegios. |
-| **Edu Edward Galindo Huaman** | **P1:** Usuario–roles adicionales. **P2:** auditoría. Complemento multirrol de **P3**. | **RF-USR-04:** asignar y quitar roles adicionales sin perder el principal. **RF-AUD-01/02:** registrar operaciones críticas y permitir la consulta administrativa de la bitácora, conservando la base de auditoría existente. |
-| **Leonel Mathias Retamozo De la Cruz** | **P1:** Permiso–Rol, lado inverso. **P4:** frontend de usuarios y roles. Parte visual de **P5**. | Relación inversa de **RF-ROL-02**; interfaces de **RF-USR-01 a 05** y **RF-ROL-01/02**; navegación visual de **RF-ROL-03/04**. Formularios multirrol, listado con DNI, estado de cuentas/roles, consulta de roles asociados, pruebas de vistas e integración del trabajo del equipo. |
+| **P1** | Relaciones entre entidades con Hibernate/JPA (mínimo dos por alumno) | Cada integrante, con su propia pareja de entidades |
+| **P2** | Auditoría de las operaciones (usuario, fecha y hora, operación, entidad, ID) | Edu |
+| **P3** | Gestión de usuarios y roles (backend) | José (usuarios) · Karim (roles) |
+| **P4** | Frontend de usuarios y roles | Leonel |
+| **P5** | Control de acceso según el rol y redirección tras el login | Karim (reglas y backend) · Leonel (menús y vistas) |
 
-**Límite entre aportes:** José conserva `Usuario.rol` y el backend general de
-usuarios; Edu se encarga de `Usuario.roles` y auditoría; Karim conserva
-`Rol.permisos`, las políticas de autorización y la ruta inicial; Leonel aporta
-`Permiso.roles`, las vistas y la navegación que consume esas políticas. El
-frontend no reemplaza las comprobaciones del backend.
-
-#### P1 — evidencia JPA individual de cada integrante
-
-El enunciado exige **como mínimo dos entidades relacionadas por alumno**. Cada
-uno debe presentar sus propias evidencias de código, relación física en la base
-y funcionamiento desde la aplicación. No exige entidades diferentes para cada
-integrante ni usar las cuatro anotaciones de relación cuando no corresponden.
-
-| Integrante | Entidades y anotación que explica | Relación física y comprobación |
-| --- | --- | --- |
-| José | [`Usuario.rol`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) → [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java), `@ManyToOne` con `@JoinColumn`. | FK **`usuarios.id_rol` → `roles.id_rol`**. Registrar/editar una cuenta y comprobar que su rol principal quedó persistido. |
-| Karim | [`Rol.permisos`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java) → [`Permiso`](src/main/java/com/evaluacion01/tecsup/entity/Permiso.java), `@ManyToMany` con `@JoinTable`. | Tabla **`rol_permisos`** y sus dos FK. Asignar/revocar un permiso y comprobar las filas, sin borrar el catálogo. |
-| Edu | [`Usuario.roles`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) → [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java), `@ManyToMany` con `@JoinTable`. | Tabla **`usuario_roles`** y sus dos FK. Añadir/quitar un rol adicional y comprobar que el principal se conserva. No hay cascadas que persistan o modifiquen roles compartidos. |
-| Leonel | [`Permiso.roles`](src/main/java/com/evaluacion01/tecsup/entity/Permiso.java) → [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java), `@ManyToMany(mappedBy = "permisos")`. | Reutiliza **`rol_permisos`**, sin otra tabla. Mostrar los roles asociados a un permiso antes/después de asignarlo desde el lado propietario `Rol.permisos`. |
-
-`AuditoriaLog` conserva la identidad del ejecutor como instantánea, sin una FK a
-Usuario que elimine o invalide su historial. La pareja JPA de Edu para P1 es
-**Usuario–Rol**, no una relación de auditoría que el modelo no implementa.
-
-#### Guion breve de demostración por integrante
-
-**José — usuarios y rol principal**
-1. Mostrar `Usuario.rol`, `UsuarioRepository` y `UsuarioServiceImpl`.
-2. Como Administrador, registrar una cuenta ficticia, buscarla por DNI/usuario,
-   editarla y desactivarla/reactivarla.
-3. Comprobar `usuarios.id_rol` en SQL; intentar un DNI duplicado o datos inválidos
-   y explicar por qué el servidor los rechaza.
-4. Evidencia automatizada: [`UsuarioGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuarioGestionIntegrationTests.java).
-
-**Karim — roles, permisos y seguridad**
-1. Mostrar `Rol.permisos`, `RolService` y `AutorizacionService`.
-2. Registrar/editar un rol, asignarle permisos y desactivarlo/reactivarlo;
-   comprobar `rol_permisos` y `roles.estado` en SQL.
-3. Iniciar sesión con una cuenta autorizada y otra restringida: probar también
-   una URL directa. Explicar permisos multirrol, roles inactivos, último
-   administrador y redirección posterior al login.
-4. Evidencia: [`RolPermisoRelacionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/RolPermisoRelacionIntegrationTests.java),
-   [`RolGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/RolGestionIntegrationTests.java),
-   [`SeguridadRolesIntegrationTests`](src/test/java/com/evaluacion01/tecsup/SeguridadRolesIntegrationTests.java)
-   y [guía de roles/seguridad](docs/roles-seguridad.md).
-
-**Edu — multirrol y auditoría**
-1. Mostrar `Usuario.roles`, asignación/remoción de roles adicionales y
-   `AuditoriaLog`/`AuditoriaService`.
-2. Añadir y quitar un rol de la misma área; comprobar `usuario_roles` y la
-   conservación del rol principal, sin modificar el catálogo compartido.
-3. Registrar/editar una cuenta o cambiar su estado y, como Administrador,
-   consultar Auditoría. Mostrar ejecutor, fecha/hora, acción, entidad, ID y
-   resultado; comprobar que no se guardan claves ni tokens.
-4. Mostrar una operación rechazada y sus filtros de consulta. No se demuestra
-   eliminación física: este sistema usa activación/desactivación y conserva el
-   historial. La recuperación sigue simulada, con token solo en consola.
-5. Evidencia: [`MultirrolIntegracionTests`](src/test/java/com/evaluacion01/tecsup/MultirrolIntegracionTests.java),
-   pruebas `Auditoria*IntegrationTests` y [guía de auditoría](docs/auditoria.md).
-
-**Leonel — frontend, relación inversa e integración**
-1. Mostrar `Permiso.roles`, el formulario de usuarios, las vistas de roles y
-   `fragments/navegacion.html`.
-2. Demostrar selección de área/rol principal/adicionales, columna DNI y controles
-   de edición/estado; comparar la vista de Administrador con una de solo consulta.
-3. En Roles → Permisos, mostrar la consulta inversa de roles asociados y su cambio
-   al guardar la asignación desde el backend de Karim.
-4. Comparar menús y opciones permitidas, sin presentar botones ocultos como única
-   medida de seguridad. Mostrar pruebas de vistas y el historial Git conservado.
-5. Evidencia: [`PermisoRolInversoIntegrationTests`](src/test/java/com/evaluacion01/tecsup/PermisoRolInversoIntegrationTests.java),
-   [`UsuariosFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuariosFrontendIntegrationTests.java),
-   [`RolesFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/RolesFrontendIntegrationTests.java),
-   [`NavegacionFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/NavegacionFrontendIntegrationTests.java)
-   y [guía individual de Retamozo](docs/retamozo-evaluacion02.md).
-
-Para la exposición conjunta: **código → tabla/FK en SQL → operación en la
-aplicación → prueba positiva y rechazo de un caso inválido**. Las 277 pruebas
-automatizadas usan H2; la ejecución SQL comprobada es MariaDB 10.4.32, no MySQL 8.
-No presentar SMTP real ni módulos todavía pendientes como implementados.
-
-### Extensión clínica: Pacientes y Atenciones
-
-El Médico ahora consulta pacientes y registra atenciones con su cuenta y la fecha
-del servidor. Solo ve sus propias notas; Administrador registra/edita los datos
-de pacientes y puede revisar todas las atenciones. Las cuentas del personal siguen
-en Usuarios: **un paciente no necesita usuario ni contraseña**.
-
-Guía de permisos, preparación y demostración:
-[docs/modulo-clinico.md](docs/modulo-clinico.md). Se conservan autorización multirrol,
-CSRF, auditoría sin textos clínicos y recuperación simulada. No se incluyen citas
-ni funciones de recepción; utiliza exclusivamente datos ficticios.
-
-**Responsable de esta extensión solicitada después del reparto:** Leonel,
-durante la integración. No sustituye las evidencias individuales anteriores.
-
-| Requisito adicional | Qué se expone |
+| Integrante | Responsabilidad |
 | --- | --- |
-| **RF-PAC-01** | Registro/edición de datos demográficos de pacientes con validaciones y DNI único. Pacientes no son cuentas de acceso. |
-| **RF-PAC-02** | Búsqueda y ficha de pacientes; acceso según permisos, con navegación clínica. |
-| **RF-ATE-01** | Registro de atención con profesional autenticado y fecha UTC del servidor. Cada Médico ve sus propias notas; Administrador puede revisar todas. No hay edición/eliminación de atenciones. |
+| **José Saith Rojas Condor** | P1: Usuario–Rol principal. P3: backend de usuarios. |
+| **Karim Alexander Sovero Campoverde** | P1: Rol–Permiso. P3: backend de roles. P5: autorización y redirección. |
+| **Edu Edward Galindo Huaman** | P1: Usuario–roles adicionales. P2: auditoría. Complemento multirrol de P3. |
+| **Leonel Mathias Retamozo De la Cruz** | P1: Permiso–Rol (lado inverso). P4: frontend. Parte visual de P5. |
 
-Estos códigos documentan una ampliación del proyecto, **no nuevos puntos
-obligatorios del enunciado**. Médico/general/especialista comparten esas funciones
-en esta versión; Enfermería, Recepción, Laboratorio y Farmacia aún no tienen
-módulos propios. Las cuentas de prueba creadas en la base local no se copian
-mediante Git ni forman parte de una semilla automática.
+El enunciado indica que cada entidad relacionada se evidencia con **código de las
+entidades, base de datos y funcionamiento del CRUD**. Cada sección de integrante
+indica dónde está cada una de esas tres cosas.
 
-### Consulta de DNI (RENIEC)
+---
 
-Al escribir los 8 dígitos del campo **DNI** en los formularios de Usuarios y de
-Pacientes, el sistema consulta un proveedor externo y completa nombres y apellidos.
-Quien registra debe revisarlos antes de guardar; si falla, se escriben a mano.
+## José Saith Rojas Condor — Usuarios y rol principal
 
-- **Dos modos.** Con la variable de entorno `RENIEC_TOKEN` consulta al proveedor real
-  (el token nunca va en el repositorio; por defecto `apis.net.pe`, un servicio de
-  terceros, no oficial de RENIEC, configurable en `reniec.api.url`). Sin token y con
-  `reniec.simulado=true` (valor actual) devuelve **nombres ficticios de
-  demostración**, siempre los mismos para un mismo DNI, y la pantalla los marca como
-  "DEMOSTRACIÓN (simulados): no provienen de RENIEC". Con `reniec.simulado=false` y
-  sin token la consulta queda desactivada.
-- **Dónde está:** [`ReniecController`](src/main/java/com/evaluacion01/tecsup/controller/ReniecController.java)
-  (`GET /api/reniec/dni/{dni}`, exige sesión y permiso `usuarios` o `pacientes` con
-  CREAR/EDITAR), [`ReniecService`](src/main/java/com/evaluacion01/tecsup/service/ReniecService.java)
-  y [`reniec.js`](src/main/resources/static/js/reniec.js).
-- **Datos personales:** el DNI solo se valida y se envía al proveedor; la respuesta
-  no se registra ni se guarda salvo lo que el usuario confirme en el formulario.
-- **Pruebas:** `ReniecServiceTest` (con un servidor simulado),
-  `ReniecControllerIntegrationTests` y `ReniecSimuladoIntegrationTests`. La llamada
-  real al proveedor no se probó desde este entorno: confírmala con tu token antes de
-  presentarla como datos de RENIEC.
+### P1 · Relación Usuario–Rol (`@ManyToOne`)
 
-## Alcance de esta entrega
+- **Entidades:** [`Usuario`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) → [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java).
+- **Anotación:** `@ManyToOne` con `@JoinColumn(name = "id_rol")` en `Usuario.rol`.
+- **Base de datos:** clave foránea `usuarios.id_rol → roles.id_rol` ([`schema.sql`](src/main/resources/schema.sql)).
+- **Integridad:** un usuario siempre tiene un rol principal; un rol referenciado no se elimina.
+- **CRUD:** al registrar o editar una cuenta se persiste su rol principal.
 
-Esta entrega académica conserva la **Prueba 1**, integra Evaluación 02 y añade la
-extensión clínica documentada arriba. Incluye acceso, recuperación de contraseña,
-administración de usuarios/roles/permisos, auditoría, pacientes y atenciones.
-No está preparada para producción ni debe exponerse a Internet con la configuración
-y credenciales de ejemplo actuales. Los problemas conocidos quedan registrados al
-final de este documento para las siguientes entregas.
+### P3 · Backend de usuarios
 
-Los roles hospitalarios sirven como catálogo de personal. Médico, Médico general
-y Médico especialista reciben permisos de pacientes y atenciones en la semilla,
-no acceso administrativo por pertenecer a Medicina. Todavía no existen citas,
-laboratorio, medicamentos ni funciones de recepción. Los roles sin permisos para
-módulos implementados siguen viendo un dashboard sin accesos adicionales.
-
-## Tecnologías
-
-- Java 17 como versión objetivo y Spring Boot 3.2.5.
-- Maven Wrapper, Spring MVC, Thymeleaf, JPA/Hibernate y MySQL.
-- BCrypt para contraseñas, sesiones HTTP y autorización manual por permisos.
-- Bootstrap 5 y Bootstrap Icons mediante CDN.
-
-## Requerimientos
-
-### RF-LOGIN-01 — Inicio de sesión con usuario/correo y contraseña
-**Responsable:** Galindo Huaman Edu Edward
-**Para qué sirve:** permite que cualquier usuario registrado entre al sistema
-identificándose con su nombre de usuario *o* su correo, más su contraseña.
-**Dónde está:**
-- [`LoginController`](src/main/java/com/evaluacion01/tecsup/controller/LoginController.java) — `GET /login` muestra el formulario, `POST /login` procesa el envío.
-- [`login.html`](src/main/resources/templates/login.html) — formulario de acceso.
-- [`AuthService.autenticar()`](src/main/java/com/evaluacion01/tecsup/service/AuthService.java) — busca al usuario por usuario o correo.
-- [`UsuarioRepository.findByUsuarioOrCorreo()`](src/main/java/com/evaluacion01/tecsup/repository/UsuarioRepository.java) — consulta a la base de datos.
-
-### RF-LOGIN-02 — Validación de credenciales antes del acceso
-**Responsable:** Galindo Huaman Edu Edward
-**Para qué sirve:** evita que alguien entre sin una contraseña correcta o con una
-cuenta desactivada; solo si todo es válido se crea la sesión.
-**Dónde está:**
-- [`AuthService.autenticar()`](src/main/java/com/evaluacion01/tecsup/service/AuthService.java) — compara la contraseña con `PasswordEncoder.matches()` (BCrypt) y revisa el campo `estado` del usuario.
-- [`SecurityConfig.passwordEncoder()`](src/main/java/com/evaluacion01/tecsup/config/SecurityConfig.java) — define el `BCryptPasswordEncoder` usado para el hash/verificación.
-- [`LoginController.processLogin()`](src/main/java/com/evaluacion01/tecsup/controller/LoginController.java) — solo guarda al usuario en sesión (`HttpSession`) si `autenticar()` no lanzó una excepción.
-
-### RF-LOGIN-03 — Mensaje cuando las credenciales son incorrectas
-**Responsable:** Retamozo De la Cruz Leonel Mathias
-**Para qué sirve:** le informa al usuario por qué no pudo entrar (usuario
-inexistente, contraseña incorrecta, cuenta inactiva) en vez de fallar en silencio.
-**Dónde está:**
-- [`AuthService.autenticar()`](src/main/java/com/evaluacion01/tecsup/service/AuthService.java) — lanza excepciones con el mensaje específico de cada caso.
-- [`LoginController.processLogin()`](src/main/java/com/evaluacion01/tecsup/controller/LoginController.java) — captura la excepción y la pasa a la vista como `error`.
-- [`login.html`](src/main/resources/templates/login.html) — muestra el mensaje en una alerta Bootstrap cuando existe `error`.
-
-### RF-LOGIN-04 — Recuperación de contraseña
-**Responsable:** Retamozo De la Cruz Leonel Mathias
-**Para qué sirve:** deja que un usuario que olvidó su contraseña pida un token por
-correo y lo use para definir una nueva, sin depender de un administrador.
-En la configuración local predeterminada, el envío es simulado: el token aparece en
-la consola del servidor. El envío real requiere configurar SMTP.
-**Dónde está:**
-- [`ViewController`](src/main/java/com/evaluacion01/tecsup/controller/ViewController.java) — sirve las páginas `/forgot-password` y `/reset-password`.
-- [`forgot-password.html`](src/main/resources/templates/forgot-password.html) / [`reset-password.html`](src/main/resources/templates/reset-password.html) — formularios que llaman a la API por JavaScript (`fetch`).
-- [`PasswordRecoveryController`](src/main/java/com/evaluacion01/tecsup/controller/PasswordRecoveryController.java) — expone `POST /api/v1/auth/forgot-password` y `POST /api/v1/auth/reset-password`.
-- [`PasswordRecoveryService`](src/main/java/com/evaluacion01/tecsup/service/PasswordRecoveryService.java) — genera el token, lo guarda con expiración de 15 minutos, y actualiza la contraseña (hasheada) cuando el token es válido.
-- [`ForgotPasswordDto` / `ResetPasswordDto` / `ApiResponseDto`](src/main/java/com/evaluacion01/tecsup/dto/) — datos de entrada/salida de la API.
-- [`GlobalExceptionHandler`](src/main/java/com/evaluacion01/tecsup/exception/GlobalExceptionHandler.java) — convierte los errores de este flujo en respuestas JSON entendibles.
-
-### RF-USR-01 — El administrador registra usuarios
-**Responsable:** Jose Rojas Condor
-**Para qué sirve:** permite dar de alta nuevos usuarios del sistema (nombre, DNI,
-correo, usuario, contraseña, área y rol) desde una pantalla, sin tocar la base de datos a mano.
-**Dónde está:**
-- [`UsuarioController.listar()` / `guardar()`](src/main/java/com/evaluacion01/tecsup/controller/UsuarioController.java) — `GET /usuarios` muestra el formulario y la lista, `POST /usuarios/guardar` crea el usuario cuando no trae `idUsuario`.
-- [`formulario.html`](src/main/resources/templates/formulario.html) — formulario de alta/edición y tabla de usuarios registrados.
-- [`UsuarioServiceImpl.registrarUsuario()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java) — hashea la contraseña y guarda el usuario.
-- [`Usuario`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) / [`UsuarioRepository`](src/main/java/com/evaluacion01/tecsup/repository/UsuarioRepository.java) — entidad y acceso a datos.
-
-### RF-USR-02 — El administrador modifica los datos de los usuarios
-**Responsable:** Jose Rojas Condor
-**Para qué sirve:** permite corregir o actualizar los datos de un usuario ya
-existente (incluyendo cambiar su contraseña o su rol) sin crear uno nuevo.
-**Dónde está:**
-- [`UsuarioController.mostrarFormularioEditar()` / `guardar()`](src/main/java/com/evaluacion01/tecsup/controller/UsuarioController.java) — `GET /usuarios/editar/{id}` precarga el formulario, `POST /usuarios/guardar` actualiza cuando sí trae `idUsuario`.
-- [`UsuarioServiceImpl.actualizarUsuario()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java) — actualiza los datos enviados y conserva la contraseña si se deja vacía en edición.
-- **Activar/desactivar usuario** — botón por cada fila de la tabla en `formulario.html` que llama a `POST /usuarios/{id}/estado` ([`UsuarioController.cambiarEstado()`](src/main/java/com/evaluacion01/tecsup/controller/UsuarioController.java)), el cual invierte el campo `estado` ([`UsuarioServiceImpl.cambiarEstado()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java)). Sirve, por ejemplo, para cuando alguien deja de trabajar en el hospital: se le desactiva en vez de borrarlo, y `AuthService` ya bloqueaba el login de cuentas inactivas — pero antes no existía ninguna forma de marcarlas así desde la interfaz.
-
-### RF-USR-03 — Corrección de la activación/desactivación de usuarios
-**Responsable:** Jose Rojas Condor
-**Para qué sirve:** que desactivar a un usuario funcione de verdad y no se pueda deshacer por accidente.
-**Qué se corrigió:**
-- Editar a un usuario inactivo lo volvía a activar, porque el formulario no envía `estado` y la entidad lo inicia en `true`. Ahora [`UsuarioServiceImpl.actualizarUsuario()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java) no toca el estado.
-- El botón alternaba el estado (un doble clic lo revertía). Ahora `POST /usuarios/{id}/estado` recibe `activo=true|false` y pide confirmación en [`formulario.html`](src/main/resources/templates/formulario.html).
-- Un usuario desactivado seguía navegando con su sesión abierta. [`SesionActivaInterceptor`](src/main/java/com/evaluacion01/tecsup/config/SesionActivaInterceptor.java) recarga al usuario en cada petición y, si ya no está activo, cierra su sesión y lo manda a `/login?cuentaInactiva`.
-- No se puede desactivar la propia cuenta ni al último administrador activo ([`UsuarioServiceImpl.cambiarEstado()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java)).
-
-### RF-USR-04 — Asignar múltiples roles a un usuario
-**Responsable de multirrol en Evaluación 02:** Galindo Huaman Edu Edward.
-**Frontend e integración:** Retamozo De la Cruz Leonel Mathias.
-**Unión de permisos y autorización:** Sovero Campoverde Karim Alexander.
-**Para qué sirve:** un mismo usuario puede tener varios roles de su área (por ejemplo, Médico general y Médico especialista).
-**Dónde está:**
-- [`Usuario.roles`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) (tabla `usuario_roles` en [`schema.sql`](src/main/resources/schema.sql)). `usuarios.id_rol` se mantiene como **rol principal** y siempre está incluido en `roles`. `getRolesAsignados()` devuelve el principal primero y luego los demás.
-- El formulario tiene casillas "Roles adicionales" filtradas por el área elegida; la tabla muestra todos los roles (el principal resaltado).
-- Los usuarios existentes se migran solos: `schema.sql` copia su `id_rol` a `usuario_roles`.
-- `AutorizacionService` combina los permisos de todos los roles asignados (RF-ROL-03).
-
-### RF-USR-05 — Búsqueda y filtros de usuarios
-**Responsable:** Jose Rojas Condor
-**Para qué sirve:** encontrar rápido a un usuario cuando la lista crece.
-**Dónde está:**
-- `GET /usuarios?q=&area=&idRol=&estado=activos|inactivos` en [`UsuarioController.listar()`](src/main/java/com/evaluacion01/tecsup/controller/UsuarioController.java).
-- [`UsuarioRepository.buscar()`](src/main/java/com/evaluacion01/tecsup/repository/UsuarioRepository.java): el texto busca en nombres, apellidos, nombre completo, DNI, correo y usuario; el rol coincide si es el principal o uno adicional.
-- Barra de filtros encima de la tabla en [`formulario.html`](src/main/resources/templates/formulario.html), con botón para limpiarlos.
-
-
-### Validaciones y pruebas del backend de usuarios
-**Responsable:** Jose Rojas Condor
-- [`UsuarioServiceImpl.validarDatos()`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java) limpia espacios y valida obligatorios (nombres, apellidos, correo, usuario, área, rol principal), formatos (correo, DNI de 8 dígitos, teléfono, usuario, contraseña de 6+ caracteres) y duplicados de usuario, correo y DNI antes de guardar, sin distinguir mayúsculas. Al editar, los datos propios no cuentan como duplicado.
-- DNI y teléfono vacíos se guardan como `NULL`, para que dos usuarios sin DNI no choquen con la restricción `UNIQUE`.
-- [`UsuarioGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuarioGestionIntegrationTests.java): rol principal guardado en `usuarios.id_rol` al registrar y editar, FK que rechaza roles inexistentes y protege roles en uso, registro, listado, búsqueda, edición, activación/desactivación, multirrol, validaciones y protecciones de administradores.
-
-### RF-ROL-01 — El administrador registra y modifica roles
-**Responsable:** Sovero Campoverde Karim Alexander
-**Para qué sirve:** permite crear los roles del sistema (por ejemplo "Administrador",
-"Médico") y editar su nombre, descripción y área, para luego asignárselos a los usuarios.
-**Dónde está:**
-- [`RolController.listar()` / `nuevoForm()` / `editarForm()` / `guardar()`](src/main/java/com/evaluacion01/tecsup/controller/RolController.java) — rutas `GET /roles`, `GET /roles/nuevo`, `GET /roles/{id}/editar`, `POST /roles/guardar`.
-- [`roles/lista-roles.html`](src/main/resources/templates/roles/lista-roles.html) / [`roles/form-rol.html`](src/main/resources/templates/roles/form-rol.html) — listado y formulario.
-- [`RolService.guardar()`](src/main/java/com/evaluacion01/tecsup/service/RolService.java) — valida nombre único y crea/actualiza.
-- [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java) / [`RolRepository`](src/main/java/com/evaluacion01/tecsup/repository/RolRepository.java) — entidad y acceso a datos.
-
-### RF-ROL-02 — El administrador asigna permisos a cada rol
-**Responsable:** Sovero Campoverde Karim Alexander
-**Para qué sirve:** define qué puede hacer cada rol, marcando qué permisos
-(por módulo, ej. "usuarios: EDITAR") tiene asignados.
-**Dónde está:**
-- [`RolController.asignarPermisosForm()` / `asignarPermisos()`](src/main/java/com/evaluacion01/tecsup/controller/RolController.java) — `GET`/`POST /roles/{id}/permisos`.
-- [`roles/asignar-permisos.html`](src/main/resources/templates/roles/asignar-permisos.html) — checklist de permisos por módulo.
-- [`RolService.asignarPermisos()`](src/main/java/com/evaluacion01/tecsup/service/RolService.java) — reemplaza el conjunto de permisos del rol.
-- [`Permiso`](src/main/java/com/evaluacion01/tecsup/entity/Permiso.java) / [`PermisoRepository`](src/main/java/com/evaluacion01/tecsup/repository/PermisoRepository.java) — entidad y acceso a datos.
-- Tabla intermedia `rol_permisos` (ver [`schema.sql`](src/main/resources/schema.sql)) — relación muchos-a-muchos entre roles y permisos.
-- **Se comprueban permisos por módulo y acción**, no solo se guardan:
-  [`AutorizacionService.tienePermiso()`](src/main/java/com/evaluacion01/tecsup/service/AutorizacionService.java)
-  revisa si alguno de los roles del usuario logueado tiene el permiso (módulo + nombre) requerido
-  para cada acción. `UsuarioController` y `RolController` llaman a este servicio antes
-  de listar, crear, editar o cambiar el estado — si no tiene el permiso, se le
-  redirige sin ejecutar la acción, con un mensaje de "Tu rol no tiene permiso...".
-  [`NavegacionModelAdvice`](src/main/java/com/evaluacion01/tecsup/controller/NavegacionModelAdvice.java)
-  además oculta los enlaces "Usuarios"/"Roles" del menú y los botones "Editar" en las
-  tablas cuando el rol no tiene el permiso correspondiente. El rol llamado
-  **"Administrador"** (por nombre, sin importar mayúsculas) tiene acceso total
-  automático, sin depender de sus permisos asignados — así no te quedas fuera del
-  sistema si a ese rol se le olvida marcar algún checkbox.
-
-### RF-ROL-03 — Permisos para múltiples roles
-**Responsable:** Sovero Campoverde Karim Alexander
-**Para qué sirve:** las acciones y la navegación utilizan la unión de los permisos
-del rol principal y de los adicionales. No es necesario cambiar el rol principal
-para aprovechar un permiso de otro rol.
-**Dónde está:** [`AutorizacionService`](src/main/java/com/evaluacion01/tecsup/service/AutorizacionService.java).
-- Los usuarios anteriores sin filas en `usuario_roles` conservan los permisos del principal.
-- Administrador concede acceso total tanto como principal como adicional.
-- Se verifica la cuenta persistida y su estado, no nombres de roles enviados en un
-  formulario ni una copia obsoleta de la sesión. Cambiar permisos se refleja en la
-  siguiente petición; una cuenta inactiva o eliminada no conserva acceso.
-- La protección del último administrador cuenta cuentas distintas con Administrador
-  en cualquiera de sus roles, y también impide quitarle ese rol al último activo.
-
-### RF-ROL-04 — Impedir accesos indebidos y autoasignación de Administrador
-**Responsable:** Sovero Campoverde Karim Alexander
-**Reglas aplicadas en el servidor:**
-- Solo un Administrador activo puede crear/editar roles o asignar sus permisos.
-  `roles:EDITAR` no concede esa facultad a otras cuentas, aunque esté asignado en la BD.
-- Solo un Administrador puede asignar Administrador, ya sea principal o adicional,
-  crear cuentas administrativas, editar sus datos/contraseña o cambiar su estado.
-- Un operador no administrador puede modificar sus datos personales, pero no su
-  conjunto de roles. Tampoco puede conceder permisos que no posee ni modificar
-  cuentas con permisos superiores para tomar su contraseña.
-- El nombre del rol Administrador es reservado: no se puede renombrar para quitar
-  o conceder acceso total por esa vía.
-- Los servicios de usuarios y roles reciben al operador autenticado y validan la
-  operación antes de modificar entidades; no basta con ocultar botones.
-- Los formularios solo enlazan campos permitidos. No aceptan inyección de
-  `estado`, tokens de recuperación, asociaciones de roles o permisos anidados.
-- Usuarios, roles y dashboard exigen sesión. Los formularios POST requieren CSRF;
-  Thymeleaf inserta el token automáticamente. Los dos endpoints públicos de
-  recuperación de contraseña mantienen su flujo JSON sin token CSRF.
-
-La interfaz oculta Administrador de los roles asignables a operadores, identifica
-cuentas protegidas y conserva el catálogo completo en los filtros de búsqueda.
-Estas reglas no implementan auditoría ni envío de correo real: corresponden a las
-ramas de Edu y Retamozo.
-
-## Historial de integración
-
-Esta sección describe cambios realizados durante la integración, no instrucciones
-para instalar la versión actual. El esquema actual es `schema.sql` y los datos
-iniciales se importan manualmente desde `data.sql.example`.
-
-Cada zip traía su propia copia de entidades duplicadas (`Usuario`/`User`, `Rol`/`Role`,
-`Permiso`/`Permission`, en español e inglés) sin historial de git compartido. Se unificó
-todo bajo nombres en español y se corrigieron varios problemas que impedían que las
-piezas funcionaran juntas:
-
-- El formulario de usuarios (`formulario.html`) enviaba las ediciones a una ruta
-  (`/usuarios/actualizar/{id}`) que el controlador nunca definió: se corrigió para
-  que siempre publique a `/usuarios/guardar`.
-- El mismo formulario no mostraba el listado de usuarios ni cargaba la lista de roles
-  en el `<select>`: se agregó la tabla y se pasa `roles` al modelo.
-- `th:field="*{rol.idRol}"` fallaba al crear un usuario nuevo porque `rol` era `null`:
-  el controlador ahora inicializa un `Rol` vacío para el formulario de alta.
-- Las contraseñas se comparaban y guardaban en texto plano; ahora se usan
-  `PasswordEncoder` (BCrypt) tanto al login como al crear/editar usuarios y al
-  restablecer la contraseña.
-- `SecurityConfig` exigía autenticación de Spring Security en todas las rutas, pero el
-  login es manual por sesión HTTP (no usa el contexto de seguridad de Spring): se
-  ajustó para permitir todas las rutas y solo aportar el `PasswordEncoder`. Las páginas
-  de usuarios y roles ahora validan la sesión manualmente en el controlador.
-- `login.html` estaba en `resources/temaplates` (typo) en vez de `resources/templates`.
-- Se agregó `dashboard.html`, que no existía en ningún zip pese a que el login
-  redirige ahí.
-- Se agregó navegación (usuarios ⇄ roles ⇄ dashboard) para que la app se sienta como
-  un solo sistema.
-- Inicialmente se agregaron `schema.sql` y `data.sql` porque `ddl-auto=none` no crea
-  las tablas por sí solo. Después se retiró el seed automático: ahora se usa
-  `data.sql.example` únicamente mediante importación manual.
-
-## Mejoras recientes de interfaz y catálogo hospitalario
-
-- Se renovaron todas las vistas Thymeleaf (`login`, recuperación de contraseña,
-  dashboard, usuarios, roles, permisos y errores) con una identidad visual hospitalaria
-  consistente, diseño adaptable a móvil, iconos y componentes Bootstrap reutilizables.
-- Se añadió la hoja de estilos compartida
-  [`static/css/app.css`](src/main/resources/static/css/app.css), que unifica navegación,
-  tarjetas, formularios, tablas, botones, alertas y estados visuales.
-- El dashboard ahora presenta accesos visuales a los módulos disponibles según los permisos
-  del usuario autenticado. La navegación marca la sección actual y mantiene ocultas las
-  opciones sin autorización.
-- El formulario de usuarios organiza los datos en secciones de información personal y
-  acceso al sistema. El campo **Área** dejó de ser texto libre y ahora es obligatorio
-  mediante un menú con: `Administración`, `Medicina`, `Enfermería`, `Recepción`,
-  `Laboratorio` y `Farmacia`.
-- Cada rol pertenece a una sola área. Al seleccionar un área en el formulario de usuario,
-  el selector de roles muestra únicamente los perfiles de esa área; el controlador vuelve
-  a comprobar la relación antes de guardar para impedir asignaciones inconsistentes.
-- Los permisos de un rol se presentan como tarjetas seleccionables para facilitar su
-  configuración visual. La lógica de asignación no cambia: al guardar se reemplaza el
-  conjunto de permisos del rol.
-- Se amplió [`data.sql.example`](src/main/resources/data.sql.example) con el catálogo
-  inicial de roles por área. El rol `Administrador` conserva acceso total automático.
-
-| Área | Roles iniciales |
+| Función que pide el enunciado | Dónde está |
 | --- | --- |
-| Administración | Administrador, Coordinador administrativo, Auditor administrativo |
-| Medicina | Médico, Médico general, Médico especialista |
-| Enfermería | Enfermero, Técnico de enfermería |
-| Recepción | Recepcionista, Auxiliar de recepción |
-| Laboratorio | Analista de laboratorio, Técnico de laboratorio |
-| Farmacia | Farmacéutico, Auxiliar de farmacia |
+| Registrar usuarios | `POST /usuarios/guardar` · [`UsuarioController`](src/main/java/com/evaluacion01/tecsup/controller/UsuarioController.java) → [`UsuarioServiceImpl`](src/main/java/com/evaluacion01/tecsup/service/UsuarioServiceImpl.java) |
+| Listar usuarios | `GET /usuarios`, con búsqueda por nombre, DNI, correo o usuario |
+| Editar usuarios | `GET /usuarios/editar/{id}` y `POST /usuarios/guardar` |
+| Activar / desactivar | `POST /usuarios/{id}/estado` (estado explícito, no alterna) |
+| Asignar un rol | Rol principal en el formulario de usuario |
 
-La semilla contiene **14 roles, 11 permisos y 1 cuenta inicial**. La cuenta de
-demostración es `admin` con contraseña `admin123`. Importar la semilla no borra ni
-reinicia una base existente; el reinicio realizado durante el desarrollo fue una
-operación manual exclusiva de la base local.
+Validaciones del servidor: datos obligatorios, usuario/correo/DNI sin duplicados,
+referencias existentes, contraseña con BCrypt y la cuenta de un último administrador
+activo no puede desactivarse.
 
-| Rol | Permisos iniciales |
-| --- | --- |
-| Administrador | Acceso total administrativo, de auditoría y clínico |
-| Coordinador administrativo | Ver, crear y editar usuarios; ver roles |
-| Auditor administrativo | Solo ver usuarios y roles |
-| Médico, Médico general, Médico especialista | Ver pacientes, registrar atenciones y consultar sus propias atenciones |
-| Enfermería, recepción, laboratorio y farmacia | Sin permisos hasta incorporar sus módulos funcionales |
+### Demostración
 
-### Permisos disponibles
+1. Entrar como Administrador → **Usuarios**, registrar una cuenta ficticia.
+2. Buscarla por DNI o usuario, editarla, desactivarla y reactivarla.
+3. Comprobar en SQL: `SELECT id_usuario, usuario, id_rol, estado FROM usuarios;`
+4. Intentar un DNI duplicado y explicar por qué el servidor lo rechaza.
 
-| Permiso | Operaciones habilitadas |
-| --- | --- |
-| `usuarios:VER` | Consultar el listado de cuentas |
-| `usuarios:CREAR` | Registrar cuentas |
-| `usuarios:EDITAR` | Editar cuentas y activar/desactivar su estado |
-| `roles:VER` | Consultar el listado de roles |
-| `roles:EDITAR` | Crear/editar roles y asignar sus permisos, reservado al Administrador |
-| `auditoria:VER` | Consultar auditoría, reservado al Administrador |
-| `pacientes:VER` | Buscar pacientes y abrir sus fichas |
-| `pacientes:CREAR` / `pacientes:EDITAR` | Registrar/editar datos demográficos; no crea cuentas |
-| `atenciones:VER` / `atenciones:CREAR` | Consultar notas propias (todas para Administrador) / registrar una nueva atención; exige también `pacientes:VER` |
+**Pruebas:** [`UsuarioGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuarioGestionIntegrationTests.java).
 
-El área filtra los roles disponibles, pero **no concede permisos** por sí misma.
-No existe un permiso independiente `roles:CREAR` en esta entrega. El rol denominado
-`Administrador` tiene acceso total por su nombre, sin distinguir mayúsculas.
-La semilla usa `INSERT IGNORE`: añade datos faltantes, pero no elimina permisos
-anteriores ni restaura exactamente una configuración modificada. Debe importarse
-una sola vez en una instalación nueva.
+---
 
-## Errores encontrados y corregidos después de la primera puesta en marcha
+## Karim Alexander Sovero Campoverde — Roles, permisos y seguridad
 
-Al probar la app ya corriendo (con MySQL real) aparecieron varios problemas que no se
-veían solo compilando. Quedan documentados aquí porque son justo el tipo de cosas que
-pueden volver a pasar si se sigue tocando el código:
+### P1 · Relación Rol–Permiso (`@ManyToMany`)
 
-- **Tablas ya existentes con columnas de menos.** Si `bd_hospital` ya tenía una tabla
-  `usuarios` de pruebas previas, `CREATE TABLE IF NOT EXISTS` no la actualiza — hubo
-  que agregarle a mano las columnas `reset_token` y `reset_token_expiry` con
-  `ALTER TABLE`. Si te pasa lo mismo, compara tu tabla contra `schema.sql`.
-- **Contraseñas viejas en texto plano.** Cuentas de prueba creadas antes de la fusión
-  (cuando el login aún comparaba contraseñas sin hash) no podían iniciar sesión
-  después, porque `AuthService` ahora usa `PasswordEncoder.matches()`. Se re-hashean
-  una sola vez con BCrypt manteniendo la misma clave.
-- **`spring.mail.host` configurado por defecto rompía "Olvidé mi contraseña".**
-  Con el host puesto (aunque el usuario/contraseña de correo estuvieran vacíos),
-  Spring Boot igual crea un `JavaMailSender` real y trata de autenticarse contra
-  Gmail sin credenciales, mostrando "Authentication failed". Ahora ese bloque está
-  comentado por defecto: sin `spring.mail.host`, no se crea el bean y
-  `PasswordRecoveryService` cae al modo "imprime el token en consola".
-- **`GlobalExceptionHandler` interceptaba TODOS los controladores, no solo el de
-  recuperación de contraseña**, por usar `basePackages` + `assignableTypes` juntos
-  (Spring los combina con OR, no AND). Se dejó solo `assignableTypes` apuntando a
-  `PasswordRecoveryController`.
-- **Pantalla en blanco genérica ("Whitelabel Error Page") en cualquier error.**
-  Se agregó [`templates/error.html`](src/main/resources/templates/error.html), que
-  Spring Boot usa automáticamente para cualquier error no manejado en toda la app
-  (400, 404, 500, etc.), mostrando un mensaje entendible en vez de la página en blanco.
-- **Bug real: registrar un usuario siempre daba 400**, sin importar qué se escribiera.
-  Causa: el objeto del formulario se llamaba `"usuario"` (`@ModelAttribute("usuario")`)
-  y el propio `Usuario` tiene un campo que también se llama `usuario` (el nombre de
-  usuario). Cuando el nombre del campo coincide con el nombre del objeto completo,
-  Spring intenta convertir ese texto al objeto `Usuario` entero en vez de asignarlo
-  solo al campo, y revienta. Se renombró el atributo del modelo a `"usuarioForm"` en
-  [`UsuarioController`](src/main/java/com/evaluacion01/tecsup/controller/UsuarioController.java)
-  y en [`formulario.html`](src/main/resources/templates/formulario.html).
-- **Guardar un usuario/correo/DNI duplicado tiraba un error 500 con el SQL crudo.**
-  Ahora `UsuarioController.guardar()` atrapa `DataIntegrityViolationException` y
-  muestra un mensaje claro ("Ya existe un usuario con ese nombre de usuario", etc.)
-  en vez del stacktrace de la base de datos.
-- **`data.sql` se ejecutaba en cada reinicio y dejaba roles/ids "sueltos".**
-  Con `spring.sql.init.mode=always`, Spring corre `data.sql` cada vez que arranca la
-  app. Como sus `INSERT IGNORE` se intentan en cada arranque (aunque el dato ya
-  exista), MySQL igual consume un número de `AUTO_INCREMENT` por cada intento, y con
-  muchos reinicios (como durante esta depuración) los ids terminan con saltos raros
-  (ids en 12, 15, etc. en vez de seguir la secuencia). Además esos roles de ejemplo
-  ("ADMIN", "usuario") quedaban mezclados con los roles reales creados desde la app.
-  Se renombró el archivo a `data.sql.example` (ya no se ejecuta solo) — sirve como
-  plantilla de referencia para poblar una base de datos nueva y vacía a mano, no se
-  corre automáticamente.
-
-## Instalación nueva
-
-### Requisitos previos
-
-- JDK 17 con `java` y `javac` disponibles; `JAVA_HOME` debe apuntar al JDK si se configura.
-- MySQL accesible en `localhost:3306`, preferentemente MySQL 8.0 o superior.
-- Cliente `mysql` o una herramienta SQL como SQLyog o MySQL Workbench.
-- Internet para descargar Maven, dependencias y recursos CDN de las vistas.
-
-El entorno local de desarrollo utilizó XAMPP. Algunas instalaciones incluyen MariaDB
-o versiones antiguas: no se garantiza compatibilidad con todas ellas y Hibernate puede
-mostrar advertencias sobre la versión del motor. No es necesario instalar Maven
-por separado porque el proyecto incluye su wrapper.
-
-Comprueba el JDK y ejecuta los comandos siguientes desde la raíz del proyecto:
-
-```text
-java -version
-javac -version
-```
-
-### Preparar la base
-
-Estas instrucciones son para una base nueva y no incluyen comandos de borrado.
-Si `bd_hospital` ya contiene datos, consulta primero la sección de bases anteriores.
-El usuario SQL necesita permisos para crear el esquema y operar sobre sus tablas.
-
-Abre el cliente desde la raíz del proyecto; sustituye `root` por tu usuario local:
-
-```text
-mysql --default-character-set=utf8mb4 -u root -p
-```
-
-Si usas XAMPP y el cliente no está en `PATH`, en PowerShell puedes abrirlo así:
-
-```powershell
-& "C:\xampp\mysql\bin\mysql.exe" --default-character-set=utf8mb4 -u root -p
-```
-
-Dentro del cliente, crea la base y carga el esquema antes de importar los datos:
+- **Entidades:** [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java) → [`Permiso`](src/main/java/com/evaluacion01/tecsup/entity/Permiso.java).
+- **Anotación:** `@ManyToMany` con `@JoinTable(name = "rol_permisos")` en `Rol.permisos`
+  (`joinColumns = id_rol`, `inverseJoinColumns = id_permiso`).
+- **Base de datos:** tabla `rol_permisos` con clave primaria compuesta y dos claves
+  foráneas (`fk_rolpermiso_rol`, `fk_rolpermiso_permiso`).
+- **CRUD:** `POST /roles/{id}/permisos` reemplaza el conjunto; enviarlo vacío revoca
+  todo. Revocar borra solo filas de `rol_permisos`, no el rol ni el permiso.
 
 ```sql
-CREATE DATABASE IF NOT EXISTS bd_hospital
-    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE bd_hospital;
-SOURCE src/main/resources/schema.sql;
-SOURCE src/main/resources/data.sql.example;
+SELECT r.nombre AS rol, p.modulo, p.nombre AS permiso
+FROM rol_permisos rp
+JOIN roles r ON r.id_rol = rp.id_rol
+JOIN permisos p ON p.id_permiso = rp.id_permiso
+ORDER BY r.nombre, p.modulo, p.nombre;
 ```
 
-La semilla actual omite el área de la cuenta inicial. Como ajuste manual de esta
-Prueba 1, ejecuta después de importarla:
+### P3 · Backend de roles
 
-```sql
-UPDATE usuarios u
-JOIN roles r ON r.id_rol = u.id_rol
-SET u.area = r.area
-WHERE u.usuario = 'admin';
+| Función que pide el enunciado | Dónde está |
+| --- | --- |
+| Registrar roles | `POST /roles/guardar` · [`RolController`](src/main/java/com/evaluacion01/tecsup/controller/RolController.java) → [`RolService`](src/main/java/com/evaluacion01/tecsup/service/RolService.java) |
+| Listar roles | `GET /roles` |
+| Editar roles | `GET /roles/{id}/editar` y `POST /roles/guardar` |
+| Activar / desactivar | `POST /roles/{id}/estado` (`activo=true` o `false`) |
+| Roles mínimos | **Administrador, Médico y Recepcionista**, creados por `schema.sql` |
+| Asignar permisos | `GET` y `POST /roles/{id}/permisos` |
+
+Reglas: el nombre del rol no se repite; el rol Administrador no se desactiva ni se
+renombra; un rol inactivo no otorga permisos ni se asigna a usuarios nuevos; solo un
+Administrador gestiona roles y permisos.
+
+### P5 · Autorización y redirección tras el login
+
+- [`AutorizacionService`](src/main/java/com/evaluacion01/tecsup/service/AutorizacionService.java)
+  combina los permisos de todos los roles activos del usuario, leyéndolos de la base
+  en cada petición (no de una copia vieja de la sesión). Una cuenta o un rol inactivo
+  pierde el acceso de inmediato, incluso con la sesión abierta.
+- `rutaInicial()` decide a dónde entra cada rol después del login (ver la matriz de P5).
+- Los controladores comprueban sesión y permiso antes de ejecutar, y los servicios
+  vuelven a validar, por si se llama a un servicio sin pasar por la vista.
+- Se impide la escalada de privilegios: nadie asigna permisos o roles que él mismo no
+  posee, ni cambia sus propios roles.
+
+### Demostración
+
+1. Registrar un rol, asignarle permisos, desactivarlo y reactivarlo; comprobar
+   `rol_permisos` y `roles.estado` en SQL.
+2. Entrar con una cuenta autorizada y con otra restringida; probar también una URL
+   directa a una pantalla no permitida.
+3. Explicar multirrol, rol inactivo, último administrador y redirección del login.
+
+**Pruebas:** [`RolPermisoRelacionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/RolPermisoRelacionIntegrationTests.java),
+[`RolGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/RolGestionIntegrationTests.java),
+[`SeguridadRolesIntegrationTests`](src/test/java/com/evaluacion01/tecsup/SeguridadRolesIntegrationTests.java),
+[`AutorizacionServiceTest`](src/test/java/com/evaluacion01/tecsup/service/AutorizacionServiceTest.java).
+Guía ampliada: [docs/roles-seguridad.md](docs/roles-seguridad.md).
+
+---
+
+## Edu Edward Galindo Huaman — Auditoría y multirrol
+
+### P1 · Relación Usuario–roles adicionales (`@ManyToMany`)
+
+- **Entidades:** [`Usuario`](src/main/java/com/evaluacion01/tecsup/entity/Usuario.java) → [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java).
+- **Anotación:** `@ManyToMany` con `@JoinTable(name = "usuario_roles")` en `Usuario.roles`.
+- **Base de datos:** tabla `usuario_roles` con sus dos claves foráneas.
+- **CRUD:** añadir o quitar un rol adicional conserva el rol principal. No hay
+  cascadas que modifiquen o borren roles compartidos.
+
+### P2 · Auditoría
+
+Registra las operaciones críticas del sistema en la tabla `auditoria_logs`
+([`AuditoriaLog`](src/main/java/com/evaluacion01/tecsup/entity/AuditoriaLog.java),
+[`AuditoriaService`](src/main/java/com/evaluacion01/tecsup/service/AuditoriaService.java)).
+
+| Dato que exige el enunciado | Columna |
+| --- | --- |
+| Usuario que realizó la operación | `usuario_ejecutor` (y `id_usuario_ejecutor`) |
+| Fecha y hora | `fecha_hora` (se guarda en UTC y se muestra en hora de Lima) |
+| Operación realizada | `accion` (y `modulo`) |
+| Entidad afectada | `entidad` |
+| Identificador del registro | `id_entidad` |
+
+Además guarda `resultado` (ÉXITO, FALLO o DENEGADO), `detalle`, origen (`ip`,
+`metodo_http`, `ruta`). Nunca guarda contraseñas, tokens ni textos clínicos.
+
+- **Operaciones demostrables:** registro y modificación de usuarios, roles,
+  permisos, pacientes, atenciones y citas; activación y desactivación; inicio de
+  sesión correcto y fallido.
+- **Eliminación:** el sistema no borra registros, usa activación/desactivación y
+  conserva el historial; por eso no se demuestra una eliminación física.
+- **Consulta:** `GET /auditoria`, solo para Administrador, con filtros por usuario,
+  módulo, resultado y rango de fechas ([`AuditoriaController`](src/main/java/com/evaluacion01/tecsup/controller/AuditoriaController.java)).
+
+### Demostración
+
+1. Registrar o editar una cuenta y cambiar su estado.
+2. Como Administrador, abrir **Auditoría** y mostrar ejecutor, fecha y hora, acción,
+   entidad, ID y resultado.
+3. Mostrar una operación rechazada y los filtros.
+4. Comprobar en SQL: `SELECT * FROM auditoria_logs ORDER BY id_auditoria DESC LIMIT 20;`
+
+**Pruebas:** [`MultirrolIntegracionTests`](src/test/java/com/evaluacion01/tecsup/MultirrolIntegracionTests.java)
+y las pruebas `Auditoria*IntegrationTests`. Guía: [docs/auditoria.md](docs/auditoria.md).
+
+---
+
+## Leonel Mathias Retamozo De la Cruz — Frontend y relación inversa
+
+### P1 · Relación Permiso–Rol, lado inverso (`@ManyToMany(mappedBy)`)
+
+- **Entidades:** [`Permiso`](src/main/java/com/evaluacion01/tecsup/entity/Permiso.java) → [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java).
+- **Anotación:** `@ManyToMany(mappedBy = "permisos")` en `Permiso.roles`.
+- **Base de datos:** reutiliza `rol_permisos`, sin otra tabla.
+- **CRUD:** la pantalla de permisos de un rol muestra los roles asociados a cada
+  permiso y se actualiza al guardar la asignación desde el lado propietario.
+
+### P4 · Frontend de usuarios y roles
+
+| Lo que pide el enunciado | Pantalla |
+| --- | --- |
+| Usuarios: formulario de registro, edición y selección del rol | [`formulario.html`](src/main/resources/templates/formulario.html) |
+| Usuarios: listado y activación/desactivación | Tabla de la misma pantalla `/usuarios` |
+| Roles: formulario de registro y edición | [`roles/form-rol.html`](src/main/resources/templates/roles/form-rol.html) |
+| Roles: listado y activación/desactivación | [`roles/lista-roles.html`](src/main/resources/templates/roles/lista-roles.html) |
+| Asignación de permisos | [`roles/asignar-permisos.html`](src/main/resources/templates/roles/asignar-permisos.html) |
+
+Las interfaces trabajan contra el backend: no hace falta tocar la base de datos.
+Los formularios llevan token CSRF y escapan el texto que muestran.
+
+### P5 · Parte visual
+
+[`fragments/navegacion.html`](src/main/resources/templates/fragments/navegacion.html)
+muestra solo las opciones permitidas según el rol. Ocultar un botón no es la
+seguridad: el backend vuelve a validar cada acción.
+
+### Demostración
+
+1. Mostrar el formulario de usuarios (área, rol principal y adicionales, DNI).
+2. En **Roles → Permisos**, mostrar la consulta inversa de roles asociados.
+3. Comparar el menú de un Administrador con el de un usuario de solo consulta.
+
+**Pruebas:** [`PermisoRolInversoIntegrationTests`](src/test/java/com/evaluacion01/tecsup/PermisoRolInversoIntegrationTests.java),
+[`UsuariosFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuariosFrontendIntegrationTests.java),
+[`RolesFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/RolesFrontendIntegrationTests.java),
+[`NavegacionFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/NavegacionFrontendIntegrationTests.java).
+Guía individual: [docs/retamozo-evaluacion02.md](docs/retamozo-evaluacion02.md).
+
+---
+
+## P5 · Control de acceso por rol (parte compartida)
+
+El enunciado da este ejemplo de acceso y el sistema lo cumple:
+
+| Rol | Acceso que pide el enunciado | Qué puede hacer en el sistema | Entra al iniciar sesión en |
+| --- | --- | --- | --- |
+| **Administrador** | Usuarios, roles y módulos | Usuarios, roles y permisos, auditoría, pacientes, atenciones y citas | `/dashboard` |
+| **Médico** | Pacientes e historias clínicas | Ver pacientes, registrar atenciones y consultar las propias, ver sus citas | `/pacientes` |
+| **Recepcionista** | Pacientes y citas | Ver, registrar y editar pacientes; programar y gestionar citas | `/pacientes` |
+
+El sistema, además:
+
+- **Muestra únicamente las opciones permitidas** en el menú y el tablero.
+- **Impide el acceso no autorizado** y lo valida en el **backend**: una URL directa a
+  una pantalla no permitida redirige o responde 403 sin ejecutar la acción.
+- **Redirecciona después del inicio de sesión** según los permisos (ver
+  `AutorizacionService.rutaInicial()`).
+
+### Pacientes y atenciones (historias clínicas del Médico)
+
+Un paciente no es una cuenta de acceso. El Médico ve solo sus propias atenciones; el
+Administrador puede revisar todas. Las atenciones no se editan ni se eliminan.
+Guía: [docs/modulo-clinico.md](docs/modulo-clinico.md).
+
+### Citas (Recepcionista: pacientes y citas)
+
+| Función | Detalle |
+| --- | --- |
+| Programar cita | Paciente, médico, fecha y hora (hora de Lima) y motivo. Solo hacia el futuro; un médico no tiene dos citas programadas a la misma hora; el médico debe tener una cuenta activa con permiso de atender |
+| Listar agenda | Administrador y Recepción ven todas; cada Médico ve únicamente las suyas (lo decide el servidor, no la URL) |
+| Atender / cancelar | Una cita solo cambia de PROGRAMADA a ATENDIDA o CANCELADA; no se elimina |
+| Relación JPA | [`Cita`](src/main/java/com/evaluacion01/tecsup/entity/Cita.java): `@ManyToOne` a `Paciente` y a `Usuario` (médico y quien la programó) |
+| Auditoría | `REGISTRAR_CITA`, `ATENDER_CITA`, `CANCELAR_CITA` (módulo `CITAS`), sin nombres ni DNI |
+
+Código: [`CitaService`](src/main/java/com/evaluacion01/tecsup/service/CitaService.java),
+[`CitaController`](src/main/java/com/evaluacion01/tecsup/controller/CitaController.java),
+[`citas/lista.html`](src/main/resources/templates/citas/lista.html).
+Prueba: [`CitasIntegrationTests`](src/test/java/com/evaluacion01/tecsup/CitasIntegrationTests.java).
+
+**Permisos:** `schema.sql` concede al Recepcionista `pacientes` y `citas`
+(ver, crear, editar) **una sola vez**, mientras no exista ningún permiso del módulo
+`citas`; después no reasigna nada, así que lo que un Administrador revoque se
+respeta. Los permisos clínicos de los médicos (`pacientes:VER`, `atenciones:VER` y
+`atenciones:CREAR`) se importan **a mano, una sola vez**, con
+[`permisos-clinicos.sql.example`](src/main/resources/permisos-clinicos.sql.example).
+
+---
+
+## Cómo ejecutar
+
+1. Tener MySQL o MariaDB en `localhost:3306` (XAMPP sirve). La base `bd_hospital` se
+   crea sola.
+2. Usuario y contraseña de la base: variables de entorno `DB_USERNAME` (por defecto
+   `root`) y `DB_PASSWORD` (por defecto vacía). No se escriben en el repositorio.
+3. Ejecutar la aplicación:
+
+   ```
+   ./mvnw spring-boot:run
+   ```
+
+   o ejecutar `TecsupApplication` desde IntelliJ. Al arrancar, `schema.sql` crea las
+   tablas que falten y los roles base (Administrador, Médico, Recepcionista).
+4. Abrir `http://127.0.0.1:8080/login`.
+5. Para una base nueva y vacía, importar a mano, una sola vez y en este orden,
+   [`data.sql.example`](src/main/resources/data.sql.example) y
+   [`permisos-clinicos.sql.example`](src/main/resources/permisos-clinicos.sql.example).
+   Ninguno se ejecuta al arrancar.
+
+**Demostración aislada** (no usa MySQL; datos en memoria y cuentas ficticias que se
+muestran en la consola):
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-retamozo.ps1
 ```
 
-Comprueba los datos iniciales:
+Abre `http://127.0.0.1:8095/login`.
 
-```sql
-SELECT COUNT(*) AS total_roles FROM roles;
-SELECT COUNT(*) AS total_permisos FROM permisos;
-SELECT usuario, area FROM usuarios;
+## Pruebas
+
+```
+./mvnw test
 ```
 
-En una instalación nueva deben existir 14 roles, 11 permisos y el usuario `admin`
-en Administración. Con SQLyog o Workbench, ejecuta el contenido de los dos archivos
-en ese mismo orden dentro de `bd_hospital`; `SOURCE` es un comando del cliente
-`mysql`, no SQL estándar.
+- **301 pruebas**, con H2 en memoria (no tocan tu MySQL).
+- Con **JDK 21** pasan todas. Con **JDK 25** fallan las 6 de `AuditoriaServiceTest`
+  por incompatibilidad de Mockito con esa versión de Java; las otras 295 pasan.
+- Ejecución contra servidor SQL real comprobada en **MariaDB 10.4 (XAMPP)**; MySQL 8
+  no se ha probado.
 
-### Configurar y arrancar
+## Para la exposición
 
-Las credenciales se leen de `DB_USERNAME` y `DB_PASSWORD`. Los valores locales por
-defecto son `root` y contraseña vacía. Utiliza variables de entorno y no escribas
-contraseñas reales en archivos versionados.
-
-Windows PowerShell:
-
-```powershell
-$env:DB_USERNAME = "root"
-$env:DB_PASSWORD = "tu_password_local"
-.\mvnw.cmd spring-boot:run
-```
-
-Linux/macOS:
-
-```bash
-export DB_USERNAME="root"
-export DB_PASSWORD="tu_password_local"
-sh ./mvnw spring-boot:run
-```
-
-Usa tu contraseña real en el entorno de la terminal; si tu instalación local no tiene
-contraseña, asigna una cadena vacía. El wrapper Unix se invoca mediante `sh` porque
-su permiso ejecutable todavía no está registrado en Git.
-
-Abre `http://localhost:8080/login` e ingresa con `admin` / `admin123`.
-Esta cuenta es exclusivamente de demostración. Cambia la contraseña antes de
-compartir una instancia y no reutilices esa credencial en otros sistemas.
-
-La aplicación ejecuta `schema.sql` al arrancar, pero no importa `data.sql.example`.
-La creación automática de la base mediante la URL JDBC solo funciona si el usuario
-SQL tiene permisos suficientes; los pasos anteriores evitan depender de ella.
-
-### Recuperación de contraseña
-
-Sin SMTP configurado, el token se imprime en la consola del servidor y dura 15 minutos.
-Este modo sirve únicamente para la demostración local. Para enviar correo real,
-configura el bloque SMTP comentado en `application.properties` usando las variables
-`MAIL_USERNAME` y `MAIL_PASSWORD`. No publiques logs que contengan tokens.
-El mensaje de la vista todavía menciona la consola aunque SMTP esté habilitado.
-
-## Bases anteriores
-
-`schema.sql` usa `CREATE TABLE IF NOT EXISTS`: no actualiza tablas ya existentes.
-No hay migraciones automáticas en esta entrega. Una base de la versión anterior puede
-carecer de `roles.area`, `usuarios.reset_token` o `usuarios.reset_token_expiry`.
-
-Antes de actualizar una base en uso, haz un respaldo y compara su estructura con
-el esquema actual. Incorporar `roles.area` exige clasificar los roles existentes y
-reconciliar las áreas de sus usuarios antes de imponer la restricción obligatoria.
-Las contraseñas antiguas en texto plano tampoco son compatibles con BCrypt.
-No borres una base con datos reales ni importes la semilla como sustituto de una
-migración. El procedimiento de actualización se mejorará en futuras entregas.
-
-## Verificación
-
-Las entregas de Retamozo para RF-AUD-01 y RF-AUD-02 se documentan en
-[docs/auditoria.md](docs/auditoria.md), con sus políticas de persistencia y pruebas.
-
-El backend de roles y seguridad de Sovero (relación Rol–Permiso, estado de roles,
-matriz de accesos por rol, redirección del login y verificación con MySQL) se documenta
-en [docs/roles-seguridad.md](docs/roles-seguridad.md).
-
-En la revisión del 30 de septiembre de 2026 se ejecutó:
-
-```powershell
-.\mvnw.cmd clean package -DskipTests
-```
-
-La compilación y el empaquetado finalizaron correctamente. El JAR nuevo incluye los
-servicios, plantillas y CSS actuales, y no contiene el antiguo `data.sql` automático.
-Esta ejecución omitió pruebas y no valida los flujos de negocio ni el renderizado
-de todas las vistas. El entorno de verificación utilizó JDK 25 con objetivo Java 17;
-queda pendiente verificar la ejecución específicamente con JDK 17.
-
-Para ejecutar las pruebas en Windows:
-
-```powershell
-.\mvnw.cmd test
-```
-
-En Linux/macOS utiliza `sh ./mvnw test`. Las pruebas usan el perfil `test` y una base
-H2 en memoria, sin conectar a MySQL ni importar la semilla. Se incluyen:
-- `AutorizacionServiceTest`: unión de permisos, roles adicionales, compatibilidad
-  del principal y rechazo de identidades obsoletas, inexistentes o inactivas.
-- `AutorizacionIntegrationTests`: peticiones reales mediante MockMvc, renderizado
-  de formularios, CSRF, autoasignación de Administrador, cuentas protegidas,
-  permisos superiores, binding seguro, último administrador y cambios de permisos.
-- `TecsupApplicationTests`: carga del contexto con la misma configuración aislada.
-
-Para compilar y empaquetar ejecutando también las pruebas:
-
-```powershell
-.\mvnw.cmd package
-```
-
-En la verificación de RF-ROL-03/04 del 8 de octubre de 2026, este comando finalizó
-con `BUILD SUCCESS`: **42 pruebas, sin fallos ni pruebas omitidas**, usando JDK 21
-con objetivo Java 17 y H2 en memoria.
-
-Estas pruebas no sustituyen una verificación contra MySQL ni validan SMTP,
-auditoría o cambios administrativos concurrentes. Sigue pendiente verificar
-específicamente la ejecución con JDK 17.
-
-## Pendientes posteriores
-
-Los pendientes de sesiones, estado inactivo, último administrador y escalada de
-privilegios indicados en la Prueba 1 se abordaron en RF-USR-03 y RF-ROL-03/04.
-Permanecen pendientes:
-
-- Verificar y reforzar la consistencia ante cambios administrativos concurrentes.
-- Mantener consistentes las áreas de usuarios al cambiar el área de un rol.
-- Incluir el área del administrador en la semilla, sin necesitar el ajuste manual.
-- Reforzar validaciones de servidor, normalizar DNI vacíos y manejar referencias inválidas.
-- Rotar la sesión tras el login, cambiar el cierre de sesión GET a POST y separar configuración local
-  de producción para no exponer trazas ni mensajes internos.
-- Reforzar recuperación de contraseña, límites de solicitudes e invalidación de tokens.
-- Incorporar migraciones, cobertura de otros flujos y módulos hospitalarios adicionales.
-
-## Antes de publicar
-
-Revisa tanto el directorio de trabajo como el contenido preparado para commit.
-En la revisión se detectó que el índice conservaba el antiguo `data.sql` y faltaban
-archivos nuevos por incorporar. Su eliminación y los nuevos servicios, plantillas,
-CSS y semilla deben quedar incluidos en el mismo snapshot del proyecto.
-No publiques credenciales reales, tokens, dumps de datos personales ni archivos de
-`target/` o del IDE. La publicación en GitHub no implica que esta demo sea apta para
-desplegarla en producción.
+Orden recomendado para cada integrante: **código de la entidad → tabla y clave
+foránea en SQL → operación en la aplicación → una prueba positiva y el rechazo de
+un caso inválido**. Todos los datos de demostración son ficticios.

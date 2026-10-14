@@ -26,7 +26,8 @@ public class SesionActivaInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String rutaActual = request.getRequestURI().substring(request.getContextPath().length());
         if (rutaActual.equals("/pacientes") || rutaActual.startsWith("/pacientes/")
-                || rutaActual.equals("/atenciones") || rutaActual.startsWith("/atenciones/")) {
+                || rutaActual.equals("/atenciones") || rutaActual.startsWith("/atenciones/")
+                || rutaActual.equals("/citas") || rutaActual.startsWith("/citas/")) {
             response.setHeader("Cache-Control", "no-store");
         }
         HttpSession session = request.getSession(false);
@@ -59,6 +60,7 @@ public class SesionActivaInterceptor implements HandlerInterceptor {
                 || "/auditoria".equals(ruta) || ruta.startsWith("/auditoria/")
                 || "/roles".equals(ruta) || ruta.startsWith("/roles/")
                 || "/pacientes".equals(ruta) || ruta.startsWith("/pacientes/")
-                || "/atenciones".equals(ruta) || ruta.startsWith("/atenciones/");
+                || "/atenciones".equals(ruta) || ruta.startsWith("/atenciones/")
+                || "/citas".equals(ruta) || ruta.startsWith("/citas/");
     }
 }
