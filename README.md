@@ -13,11 +13,11 @@ relaciones JPA, auditoría, gestión de usuarios y roles, frontend y control de 
 | **P2** | Auditoría de las operaciones (usuario, fecha y hora, operación, entidad, ID) | Edu |
 | **P3** | Gestión de usuarios y roles (backend) | José (usuarios) · Karim (roles) |
 | **P4** | Frontend de usuarios y roles | Leonel |
-| **P5** | Control de acceso según el rol y redirección tras el login | Karim (reglas y backend) · Leonel (menús y vistas) · José (citas) |
+| **P5** | Control de acceso según el rol y redirección tras el login | José (parte compartida) · Karim (reglas y backend) · Leonel (menús y vistas) |
 
 | Integrante | Responsabilidad |
 | --- | --- |
-| **José Saith Rojas Condor** | P1: Usuario–Rol principal. P3: backend de usuarios. P5: módulo de citas (acceso de Recepción, parte compartida). |
+| **José Saith Rojas Condor** | P1: Usuario–Rol principal. P3: backend de usuarios. P5: control de acceso por rol, parte compartida (incluye el módulo de citas). |
 | **Karim Alexander Sovero Campoverde** | P1: Rol–Permiso. P3: backend de roles. P5: autorización y redirección. |
 | **Edu Edward Galindo Huaman** | P1: Usuario–roles adicionales. P2: auditoría. Complemento multirrol de P3. |
 | **Leonel Mathias Retamozo De la Cruz** | P1: Permiso–Rol (lado inverso). P4: frontend. Parte visual de P5. |
@@ -59,11 +59,12 @@ activo no puede desactivarse.
 3. Comprobar en SQL: `SELECT id_usuario, usuario, id_rol, estado FROM usuarios;`
 4. Intentar un DNI duplicado y explicar por qué el servidor lo rechaza.
 
-### P5 · Citas (parte compartida)
+### P5 · Control de acceso por rol (parte compartida)
 
-José es el responsable del **módulo de citas**, que cumple el ejemplo de la P5
-"Recepcionista: pacientes y citas". Se describe en la sección
-[Citas (Recepcionista: pacientes y citas)](#citas-recepcionista-pacientes-y-citas).
+José es el responsable de la sección compartida de la P5: la matriz de acceso por
+rol, los pacientes y atenciones del Médico y el **módulo de citas** del
+Recepcionista. Se describe en
+[P5 · Control de acceso por rol](#p5--control-de-acceso-por-rol-parte-compartida).
 
 **Pruebas:** [`UsuarioGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuarioGestionIntegrationTests.java)
 y [`CitasIntegrationTests`](src/test/java/com/evaluacion01/tecsup/CitasIntegrationTests.java).
@@ -226,6 +227,13 @@ Guía individual: [docs/retamozo-evaluacion02.md](docs/retamozo-evaluacion02.md)
 
 ## P5 · Control de acceso por rol (parte compartida)
 
+**Responsable:** José Saith Rojas Condor.
+
+Las reglas de autorización y la redirección tras el login son de Karim, y los menús
+y las vistas de Leonel (ver sus secciones); esta parte compartida reúne el resultado
+completo por rol, los pacientes y atenciones del Médico y el módulo de citas del
+Recepcionista.
+
 El enunciado da este ejemplo de acceso y el sistema lo cumple:
 
 | Rol | Acceso que pide el enunciado | Qué puede hacer en el sistema | Entra al iniciar sesión en |
@@ -249,8 +257,6 @@ Administrador puede revisar todas. Las atenciones no se editan ni se eliminan.
 Guía: [docs/modulo-clinico.md](docs/modulo-clinico.md).
 
 ### Citas (Recepcionista: pacientes y citas)
-
-**Responsable:** José Saith Rojas Condor.
 
 | Función | Detalle |
 | --- | --- |
