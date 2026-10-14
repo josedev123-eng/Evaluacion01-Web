@@ -13,11 +13,11 @@ relaciones JPA, auditoría, gestión de usuarios y roles, frontend y control de 
 | **P2** | Auditoría de las operaciones (usuario, fecha y hora, operación, entidad, ID) | Edu |
 | **P3** | Gestión de usuarios y roles (backend) | José (usuarios) · Karim (roles) |
 | **P4** | Frontend de usuarios y roles | Leonel |
-| **P5** | Control de acceso según el rol y redirección tras el login | Karim (reglas y backend) · Leonel (menús y vistas) |
+| **P5** | Control de acceso según el rol y redirección tras el login | Karim (reglas y backend) · Leonel (menús y vistas) · José (citas) |
 
 | Integrante | Responsabilidad |
 | --- | --- |
-| **José Saith Rojas Condor** | P1: Usuario–Rol principal. P3: backend de usuarios. |
+| **José Saith Rojas Condor** | P1: Usuario–Rol principal. P3: backend de usuarios. P5: módulo de citas (acceso de Recepción, parte compartida). |
 | **Karim Alexander Sovero Campoverde** | P1: Rol–Permiso. P3: backend de roles. P5: autorización y redirección. |
 | **Edu Edward Galindo Huaman** | P1: Usuario–roles adicionales. P2: auditoría. Complemento multirrol de P3. |
 | **Leonel Mathias Retamozo De la Cruz** | P1: Permiso–Rol (lado inverso). P4: frontend. Parte visual de P5. |
@@ -59,7 +59,14 @@ activo no puede desactivarse.
 3. Comprobar en SQL: `SELECT id_usuario, usuario, id_rol, estado FROM usuarios;`
 4. Intentar un DNI duplicado y explicar por qué el servidor lo rechaza.
 
-**Pruebas:** [`UsuarioGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuarioGestionIntegrationTests.java).
+### P5 · Citas (parte compartida)
+
+José es el responsable del **módulo de citas**, que cumple el ejemplo de la P5
+"Recepcionista: pacientes y citas". Se describe en la sección
+[Citas (Recepcionista: pacientes y citas)](#citas-recepcionista-pacientes-y-citas).
+
+**Pruebas:** [`UsuarioGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuarioGestionIntegrationTests.java)
+y [`CitasIntegrationTests`](src/test/java/com/evaluacion01/tecsup/CitasIntegrationTests.java).
 
 ---
 
@@ -242,6 +249,8 @@ Administrador puede revisar todas. Las atenciones no se editan ni se eliminan.
 Guía: [docs/modulo-clinico.md](docs/modulo-clinico.md).
 
 ### Citas (Recepcionista: pacientes y citas)
+
+**Responsable:** José Saith Rojas Condor.
 
 | Función | Detalle |
 | --- | --- |
