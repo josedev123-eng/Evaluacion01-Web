@@ -36,8 +36,10 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label" for="dni">DNI</label>
-                <input type="text" th:field="*{dni}" class="form-control" required inputmode="numeric" pattern="[0-9]{8}" minlength="8" maxlength="8">
+                <input type="text" th:field="*{dni}" class="form-control" required inputmode="numeric" pattern="[0-9]{8}" minlength="8" maxlength="8"
+                       th:attr="data-reniec-url=@{/api/reniec/dni/}">
                 <div class="form-text">8 dígitos. No puede repetirse entre pacientes.</div>
+                <div id="dniEstado" class="form-text" aria-live="polite"></div>
             </div>
             <div class="col-md-4">
                 <label class="form-label" for="fechaNacimiento">Fecha de nacimiento</label>
@@ -55,5 +57,6 @@
     </form>
     <p class="small text-muted mt-3">Demostración académica: utiliza únicamente datos ficticios.</p>
 </main>
+<script th:src="@{/js/reniec.js}" defer></script>
 </body>
 </html>

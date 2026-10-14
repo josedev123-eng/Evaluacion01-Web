@@ -144,6 +144,30 @@ en esta versión; Enfermería, Recepción, Laboratorio y Farmacia aún no tienen
 módulos propios. Las cuentas de prueba creadas en la base local no se copian
 mediante Git ni forman parte de una semilla automática.
 
+### Consulta de DNI (RENIEC)
+
+Al escribir los 8 dígitos del campo **DNI** en los formularios de Usuarios y de
+Pacientes, el sistema consulta un proveedor externo y completa nombres y apellidos.
+Quien registra debe revisarlos antes de guardar; si falla, se escriben a mano.
+
+- **Dos modos.** Con la variable de entorno `RENIEC_TOKEN` consulta al proveedor real
+  (el token nunca va en el repositorio; por defecto `apis.net.pe`, un servicio de
+  terceros, no oficial de RENIEC, configurable en `reniec.api.url`). Sin token y con
+  `reniec.simulado=true` (valor actual) devuelve **nombres ficticios de
+  demostración**, siempre los mismos para un mismo DNI, y la pantalla los marca como
+  "DEMOSTRACIÓN (simulados): no provienen de RENIEC". Con `reniec.simulado=false` y
+  sin token la consulta queda desactivada.
+- **Dónde está:** [`ReniecController`](src/main/java/com/evaluacion01/tecsup/controller/ReniecController.java)
+  (`GET /api/reniec/dni/{dni}`, exige sesión y permiso `usuarios` o `pacientes` con
+  CREAR/EDITAR), [`ReniecService`](src/main/java/com/evaluacion01/tecsup/service/ReniecService.java)
+  y [`reniec.js`](src/main/resources/static/js/reniec.js).
+- **Datos personales:** el DNI solo se valida y se envía al proveedor; la respuesta
+  no se registra ni se guarda salvo lo que el usuario confirme en el formulario.
+- **Pruebas:** `ReniecServiceTest` (con un servidor simulado),
+  `ReniecControllerIntegrationTests` y `ReniecSimuladoIntegrationTests`. La llamada
+  real al proveedor no se probó desde este entorno: confírmala con tu token antes de
+  presentarla como datos de RENIEC.
+
 ## Alcance de esta entrega
 
 Esta entrega académica conserva la **Prueba 1**, integra Evaluación 02 y añade la

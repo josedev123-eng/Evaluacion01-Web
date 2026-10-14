@@ -46,7 +46,9 @@
         <div class="col-md-4 mb-3">
             <label class="form-label" for="dni">DNI:</label>
             <input type="text" th:field="*{dni}" class="form-control" inputmode="numeric" pattern="[0-9]{8}"
-                   minlength="8" maxlength="8" title="Opcional. Si lo ingresas, debe tener 8 dígitos." />
+                   minlength="8" maxlength="8" title="Opcional. Si lo ingresas, debe tener 8 dígitos."
+                   th:attr="data-reniec-url=@{/api/reniec/dni/}" />
+            <div id="dniEstado" class="form-text" aria-live="polite"></div>
         </div>
         <div class="col-md-4 mb-3">
             <label class="form-label" for="correo">Correo:</label>
@@ -234,5 +236,6 @@
 </main>
 <script th:src="@{/js/confirmar-estado.js}" defer></script>
 <script th:src="@{/js/usuarios.js}" defer></script>
+<script th:src="@{/js/reniec.js}" defer></script>
 </body>
 </html>
