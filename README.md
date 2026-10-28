@@ -14,15 +14,15 @@ relaciones JPA, auditoría, gestión de usuarios y roles, frontend y control de 
 | **P1** | Relaciones entre entidades con Hibernate/JPA (mínimo dos por alumno) | Cada integrante, con su propia pareja de entidades |
 | **P2** | Auditoría de las operaciones (usuario, fecha y hora, operación, entidad, ID) | Edu |
 | **P3** | Gestión de usuarios y roles (backend) | José (usuarios) · Karim (roles) |
-| **P4** | Frontend de usuarios y roles | Leonel |
-| **P5** | Control de acceso según el rol y redirección tras el login | José (parte compartida) · Karim (reglas y backend) · Leonel (menús y vistas) |
+| **P4** | Frontend de usuarios y roles | Se muestra como evidencia al demostrar Usuarios (José) y Roles (Karim); no se expone como tema aparte |
+| **P5** | Control de acceso según el rol y redirección tras el login | Leonel (demostración por rol) · Karim (reglas y backend) · José (parte compartida) |
 
 | Integrante | Responsabilidad |
 | --- | --- |
 | **José Saith Rojas Condor** | P1: Usuario–Rol principal. P3: backend de usuarios. P5: control de acceso por rol, parte compartida (incluye el módulo de citas). |
 | **Karim Alexander Sovero Campoverde** | P1: Rol–Permiso. P3: backend de roles. P5: autorización y redirección. |
 | **Edu Edward Galindo Huaman** | P1: Usuario–roles adicionales. P2: auditoría. Complemento multirrol de P3. |
-| **Leonel Mathias Retamozo De la Cruz** | P1: Permiso–Rol (lado inverso). P4: frontend. Parte visual de P5. |
+| **Leonel Mathias Retamozo De la Cruz** | P1: Permiso–Rol (lado inverso). P5: demostración del control de acceso por rol. |
 
 El enunciado indica que cada entidad relacionada se evidencia con **código de las
 entidades, base de datos y funcionamiento del CRUD**. Cada sección de integrante
@@ -185,48 +185,40 @@ y las pruebas `Auditoria*IntegrationTests`. Guía: [docs/auditoria.md](docs/audi
 
 ---
 
-## Leonel Mathias Retamozo De la Cruz — Frontend (la parte más visual)
+## Leonel Mathias Retamozo De la Cruz — Control de acceso por rol (P5)
 
-Esta es la parte **más sencilla de exponer**: se trata sobre todo de **mostrar las
-pantallas funcionando**, sin explicar código complicado.
+Expone **lo que pide el documento**, sin entrar al lado de frontend. Su parte es la
+más fácil: **inicia sesión con cada rol y muestra que cada uno solo ve lo suyo.**
 
-### P1 · Relación Permiso–Rol (en palabras simples)
+### P1 · Relación Permiso–Rol (código y base de datos)
 
 - **Entidades:** [`Permiso`](src/main/java/com/evaluacion01/tecsup/entity/Permiso.java) y [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java).
 - **Qué decir:** es la **misma tabla `rol_permisos`** que usa Karim, pero mirada al
   revés: desde un permiso se puede saber **qué roles lo usan**. Se logra con
   `@ManyToMany(mappedBy = "permisos")` en `Permiso.roles` y **no crea otra tabla**.
-- **Dónde se ve:** en la pantalla de permisos de un rol.
 
-### P4 · Frontend de usuarios y roles
+### P5 · Control de acceso según el rol (lo que pide el enunciado)
 
-| Lo que pide el enunciado | Pantalla a mostrar |
-| --- | --- |
-| Usuarios: registrar, editar y elegir el rol | [`formulario.html`](src/main/resources/templates/formulario.html) (pantalla `/usuarios`) |
-| Usuarios: listado y activar/desactivar | La misma tabla de `/usuarios` |
-| Roles: registrar y editar | [`roles/form-rol.html`](src/main/resources/templates/roles/form-rol.html) |
-| Roles: listado y activar/desactivar | [`roles/lista-roles.html`](src/main/resources/templates/roles/lista-roles.html) |
-| Asignar permisos a un rol | [`roles/asignar-permisos.html`](src/main/resources/templates/roles/asignar-permisos.html) |
+El documento pide que cada rol **vea solo lo permitido**, que el acceso se **valide
+en el backend** y que el login **redirija según el rol** (matriz completa en
+[P5 · Control de acceso por rol](#p5--control-de-acceso-por-rol-parte-compartida)).
 
-Las pantallas trabajan contra el backend: **no hace falta tocar la base de datos**.
+- **Solo las opciones permitidas:** el menú cambia según el rol.
+- **Impide el acceso no autorizado:** abrir por la URL una pantalla no permitida
+  responde 403, y el backend vuelve a validar cada acción.
+- **Redirección tras el login:** cada rol entra a su pantalla
+  (`AutorizacionService.rutaInicial()`).
 
-### P5 · Parte visual (el menú)
+### Demostración (fácil, lo del documento)
 
-[`fragments/navegacion.html`](src/main/resources/templates/fragments/navegacion.html)
-muestra **solo las opciones permitidas** según el rol. Basta con comparar el menú de
-un Administrador con el de un Médico.
+1. Iniciar sesión como **Médico**: mostrar que solo ve Pacientes y Atenciones.
+2. Iniciar sesión como **Recepcionista**: mostrar que solo ve Pacientes y Citas.
+3. Intentar abrir por la URL una pantalla no permitida y mostrar que el sistema la
+   bloquea (403).
 
-### Demostración (fácil, solo clics)
-
-1. Entrar como Administrador y abrir **Usuarios**: registrar una cuenta y mostrar el
-   listado con los botones de editar y activar/desactivar.
-2. Abrir **Roles**: registrar un rol y, en **Permisos**, marcar y guardar permisos.
-3. Comparar el menú de un Administrador con el de un usuario con menos permisos.
-
-**Pruebas:** [`PermisoRolInversoIntegrationTests`](src/test/java/com/evaluacion01/tecsup/PermisoRolInversoIntegrationTests.java),
-[`UsuariosFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuariosFrontendIntegrationTests.java),
-[`RolesFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/RolesFrontendIntegrationTests.java),
-[`NavegacionFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/NavegacionFrontendIntegrationTests.java).
+**Pruebas:** [`SeguridadRolesIntegrationTests`](src/test/java/com/evaluacion01/tecsup/SeguridadRolesIntegrationTests.java),
+[`PermisoRolInversoIntegrationTests`](src/test/java/com/evaluacion01/tecsup/PermisoRolInversoIntegrationTests.java),
+[`CitasIntegrationTests`](src/test/java/com/evaluacion01/tecsup/CitasIntegrationTests.java) (acceso de Médico y Recepción).
 Guía individual: [docs/retamozo-evaluacion02.md](docs/retamozo-evaluacion02.md).
 
 ---
