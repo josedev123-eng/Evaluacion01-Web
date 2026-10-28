@@ -101,3 +101,29 @@ Tener un permiso llamado `auditoria / VER` no habilita a un no-administrador.
 - La vista escapa el texto almacenado, no renderiza HTML del historial y usa `Cache-Control: no-store`.
 - El menú se muestra solo a administradores. La URL directa y el servicio también
   verifican autorización. Los accesos denegados quedan registrados sin entregar datos.
+
+## Auditoría con AOP (`@Auditable`)
+
+Además de las llamadas a `AuditoriaService` dentro de los servicios, el proyecto usa
+programación orientada a aspectos (Spring AOP, `spring-boot-starter-aop`):
+
+- `audit/Auditable.java`: anotación que se pone sobre un método de servicio con el
+  módulo, la acción y la entidad. Ejemplo:
+  `@Auditable(modulo = ModuloAuditoria.CITAS, accion = "ELIMINAR_CITA", entidad = "Cita")`.
+- `audit/AuditoriaAspect.java`: aspecto `@Around` que rodea los métodos anotados.
+  - Usuario: el primer parámetro de tipo `Usuario`.
+  - Registro afectado: el ID de la cita devuelta (al registrar) o el primer parámetro `Long`.
+  - Fecha y hora: la pone `AuditoriaService` al guardar.
+  - Si el método termina bien guarda `EXITO`; si lanza una excepción guarda `FALLO`
+    (o `DENEGADO` si es falta de permiso) y la vuelve a lanzar.
+- Métodos que usan el aspecto: `CitaService.registrar` (`REGISTRAR_CITA`) y
+  `CitaService.eliminar` (`ELIMINAR_CITA`).
+- El aspecto corre por fuera de la transacción del servicio: el éxito se guarda después
+  de confirmar la operación, y un error al confirmar se registra como fallo.
+
+### Eliminación
+
+Las citas que no fueron atendidas (`PROGRAMADA` o `CANCELADA`) se pueden eliminar desde
+`/citas` con el botón **Eliminar** (pide confirmación). Se necesita el permiso
+`citas:EDITAR`. La eliminación queda en `auditoria_logs` con la acción `ELIMINAR_CITA`
+y el ID de la cita borrada. Una cita `ATENDIDA` no se puede eliminar.

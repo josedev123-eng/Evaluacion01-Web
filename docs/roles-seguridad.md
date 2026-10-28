@@ -138,3 +138,16 @@ reservado al Administrador aunque otro rol reciba `roles:EDITAR`.
   Administrador, el rechazo al asignar un rol inactivo, la asignación, modificación y
   revocación en `rol_permisos`, la redirección del login y la pérdida inmediata de
   acceso al desactivar el rol de una sesión abierta.
+
+## Relación Usuario–Rol (JPA)
+
+`Usuario` tiene dos relaciones con `Rol` y las dos son intencionales:
+
+| Campo | Anotación | Tabla / columna | Para qué sirve |
+|---|---|---|---|
+| `rol` | `@ManyToOne` + `@JoinColumn(name = "id_rol")` | `usuarios.id_rol` (FK a `roles`) | Rol **principal**: el que se elige en el formulario y define el área. Obligatorio. |
+| `roles` | `@ManyToMany` + `@JoinTable(name = "usuario_roles")` | `usuario_roles (id_usuario, id_rol)` | **Todos** los roles del usuario (multirrol, RF-USR-04). Siempre incluye al principal. |
+
+- Los permisos se calculan sobre todos los roles asignados.
+- `Usuario.getRolesAsignados()` devuelve el principal primero y luego el resto, sin repetir.
+- `Rol` a su vez se relaciona con `Permiso` por `@ManyToMany` (tabla `rol_permisos`).

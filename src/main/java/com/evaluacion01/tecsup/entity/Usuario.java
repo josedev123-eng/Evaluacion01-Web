@@ -66,12 +66,17 @@ public class Usuario {
     @Column(name = "ultimo_acceso")
     private LocalDateTime ultimoAcceso;
 
-    // Rol principal del usuario (el que se muestra primero y define su área)
+    // Relación Usuario–Rol (Evaluación 02, P3). Son dos relaciones a propósito:
+    //  1) @ManyToOne "rol": el rol PRINCIPAL. Columna usuarios.id_rol (FK a roles), obligatoria.
+    //     Es el rol que se elige en el formulario y define el área del usuario.
+    //  2) @ManyToMany "roles": TODOS los roles del usuario (multirrol, RF-USR-04), tabla usuario_roles.
+    //     Siempre incluye al principal; los permisos se calculan sobre este conjunto.
+    // Para leer los roles usar getRolesAsignados(), que une ambos sin repetir.
     @ManyToOne
     @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
 
-    // RF-USR-04: todos los roles asignados al usuario, incluido el principal.
+    // RF-USR-04: todos los roles asignados al usuario, incluido el principal (ver comentario de arriba).
     // Los roles pertenecen al catálogo: guardar una cuenta no debe persistirlos ni modificarlos en cascada.
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

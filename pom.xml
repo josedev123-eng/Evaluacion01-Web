@@ -58,6 +58,12 @@
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 
+		<!-- AOP: registra la auditoría de los métodos marcados con @Auditable -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+
 		<!-- JWT Tokens -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>

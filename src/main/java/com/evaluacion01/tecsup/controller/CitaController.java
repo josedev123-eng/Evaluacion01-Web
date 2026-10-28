@@ -73,6 +73,18 @@ public class CitaController {
         return "redirect:/citas";
     }
 
+    @PostMapping("/{id}/eliminar")
+    public String eliminar(@PathVariable("id") Long id, HttpSession session, RedirectAttributes redirect) {
+        Usuario operador = (Usuario) session.getAttribute("usuarioLogueado");
+        try {
+            citas.eliminar(operador, id);
+            redirect.addFlashAttribute("exito", "Cita eliminada correctamente.");
+        } catch (IllegalArgumentException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/citas";
+    }
+
     private void prepararLista(Usuario operador, Model model, CitaFormulario formulario) {
         boolean puedeCrear = autorizacion.tienePermiso(operador, "citas", "CREAR")
                 && autorizacion.tienePermiso(operador, "pacientes", "VER");

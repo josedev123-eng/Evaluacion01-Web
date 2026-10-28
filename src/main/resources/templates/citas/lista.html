@@ -98,7 +98,12 @@
                                 <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
                             </form>
                         </th:block>
-                        <span th:unless="${puedeEditarCita and c.estado.name() == 'PROGRAMADA'}" class="text-muted small">—</span>
+                        <form th:if="${puedeEditarCita and c.estado.name() != 'ATENDIDA'}"
+                              th:action="@{/citas/{id}/eliminar(id=${c.idCita})}" method="post" class="d-inline form-estado"
+                              data-confirmar="¿Eliminar esta cita? Esta acción no se puede deshacer.">
+                            <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                        </form>
+                        <span th:unless="${puedeEditarCita and c.estado.name() != 'ATENDIDA'}" class="text-muted small">—</span>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(citas)}"><td colspan="6" class="text-center text-muted p-4">No hay citas registradas.</td></tr>
@@ -106,7 +111,8 @@
             </table>
         </div>
     </section>
-    <p class="small text-muted mt-3">Demostración académica: utiliza únicamente datos ficticios. Las citas no se eliminan: cambian de estado.</p>
+    <p class="small text-muted mt-3">Demostración académica: utiliza únicamente datos ficticios. Las citas cambian de estado; solo las no atendidas se pueden eliminar.</p>
 </main>
+<script th:src="@{/js/confirmar-estado.js}" defer></script>
 </body>
 </html>

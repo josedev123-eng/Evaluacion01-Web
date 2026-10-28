@@ -202,6 +202,43 @@ class CitasIntegrationTests {
     }
 
     @Test
+    void eliminarBorraLaCitaYElAspectoLoAudita() throws Exception {
+        Cita cita = programar(medico, "Cita a eliminar");
+        Long id = cita.getIdCita();
+
+        mvc.perform(post("/citas/" + id + "/eliminar").session(sesion(recepcion)).with(csrf()))
+                .andExpect(redirectedUrl("/citas")).andExpect(flash().attributeExists("exito"));
+        assertThat(citasRepo.findById(id)).isEmpty();
+        assertThat(logs.findAll()).anySatisfy(e -> {
+            assertThat(e.getAccion()).isEqualTo("ELIMINAR_CITA");
+            assertThat(e.getEntidad()).isEqualTo("Cita");
+            assertThat(e.getIdEntidad()).isEqualTo(id);
+            assertThat(e.getUsuarioEjecutor()).isEqualTo("recepcionCitas");
+            assertThat(e.getFechaHora()).isNotNull();
+        });
+    }
+
+    @Test
+    void unaCitaAtendidaNoSePuedeEliminar() throws Exception {
+        Cita cita = programar(medico, "Cita atendida");
+        citas.cambiarEstado(recepcion, cita.getIdCita(), EstadoCita.ATENDIDA);
+
+        mvc.perform(post("/citas/" + cita.getIdCita() + "/eliminar").session(sesion(recepcion)).with(csrf()))
+                .andExpect(redirectedUrl("/citas")).andExpect(flash().attributeExists("error"));
+        assertThat(citasRepo.findById(cita.getIdCita())).isPresent();
+    }
+
+    @Test
+    void elMedicoNoPuedeEliminarCitas() throws Exception {
+        Cita cita = programar(medico, "Cita del medico");
+
+        mvc.perform(post("/citas/" + cita.getIdCita() + "/eliminar").session(sesion(medico)).with(csrf()))
+                .andExpect(status().isForbidden());
+        assertThat(citasRepo.findById(cita.getIdCita())).isPresent();
+        assertThat(pagina("/citas", medico).select("form[action$='/eliminar']")).isEmpty();
+    }
+
+    @Test
     void sinSesionRedirigeAlLogin() throws Exception {
         mvc.perform(get("/citas")).andExpect(redirectedUrl("/login"));
     }

@@ -1,5 +1,6 @@
 package com.evaluacion01.tecsup.service;
 
+import com.evaluacion01.tecsup.audit.Auditable;
 import com.evaluacion01.tecsup.audit.ModuloAuditoria;
 import com.evaluacion01.tecsup.audit.ZonaHoraria;
 import com.evaluacion01.tecsup.dto.CitaFormulario;
@@ -23,8 +24,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
-// Citas: Recepción las programa; los médicos ven solo las suyas. No se eliminan,
-// cambian de estado (ATENDIDA o CANCELADA) y cada operación queda en la auditoría.
+// Citas: Recepción las programa; los médicos ven solo las suyas. Cambian de estado
+// (ATENDIDA o CANCELADA) y las no atendidas se pueden eliminar. Todo queda en la auditoría.
 @Service
 @RequiredArgsConstructor
 public class CitaService {
@@ -63,43 +64,53 @@ public class CitaService {
         return usuarios.activosConPermiso("atenciones", "crear");
     }
 
+    // La auditoría (éxito o fallo) la registra AuditoriaAspect gracias a @Auditable.
     @Transactional
+    @Auditable(modulo = ModuloAuditoria.CITAS, accion = "REGISTRAR_CITA", entidad = "Cita")
     public Cita registrar(Usuario operador, CitaFormulario formulario) {
-        try {
-            exigir(operador, "CREAR");
-            if (!autorizacion.tienePermiso(operador, "pacientes", "VER")) {
-                throw new AccessDeniedException("No tienes permiso para consultar pacientes.");
-            }
-            formulario.setMotivo(formulario.getMotivo() == null ? null : formulario.getMotivo().trim());
-            if (!validator.validate(formulario).isEmpty()) {
-                throw new IllegalArgumentException("Datos de la cita inválidos. Revisa paciente, médico, fecha y motivo.");
-            }
-            Paciente paciente = pacientes.findById(formulario.getIdPaciente())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Paciente no encontrado."));
-            Usuario medico = usuarios.activosConPermiso("atenciones", "crear").stream()
-                    .filter(u -> u.getIdUsuario().equals(formulario.getIdMedico())).findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("El médico seleccionado no está disponible."));
-            // La fecha se escribe en hora de Lima y se guarda como instante (UTC).
-            Instant fecha = formulario.getFechaHora().atZone(ZonaHoraria.LIMA).toInstant();
-            if (!fecha.isAfter(Instant.now(auditoriaClock))) {
-                throw new IllegalArgumentException("La cita debe programarse en una fecha y hora futuras.");
-            }
-            if (citas.existsByMedico_IdUsuarioAndFechaHoraAndEstado(medico.getIdUsuario(), fecha, EstadoCita.PROGRAMADA)) {
-                throw new IllegalArgumentException("El médico ya tiene una cita programada a esa hora.");
-            }
-            Usuario registradora = usuarios.findById(operador.getIdUsuario())
-                    .filter(u -> Boolean.TRUE.equals(u.getEstado()))
-                    .orElseThrow(() -> new AccessDeniedException("La cuenta ya no está activa."));
-            Cita cita = new Cita(paciente, medico, registradora, fecha, formulario.getMotivo());
-            citas.saveAndFlush(cita);
-            // Sin nombres, DNI ni motivo en la bitácora: solo identificadores.
-            auditoria.registrarExito(registradora, ModuloAuditoria.CITAS, "REGISTRAR_CITA", "Cita", cita.getIdCita(),
-                    "Paciente #" + paciente.getIdPaciente() + "; profesional #" + medico.getIdUsuario());
-            return cita;
-        } catch (RuntimeException e) {
-            auditoria.registrarFalloOperacion(operador, ModuloAuditoria.CITAS, "REGISTRAR_CITA", "Cita", null, e);
-            throw e;
+        exigir(operador, "CREAR");
+        if (!autorizacion.tienePermiso(operador, "pacientes", "VER")) {
+            throw new AccessDeniedException("No tienes permiso para consultar pacientes.");
         }
+        formulario.setMotivo(formulario.getMotivo() == null ? null : formulario.getMotivo().trim());
+        if (!validator.validate(formulario).isEmpty()) {
+            throw new IllegalArgumentException("Datos de la cita inválidos. Revisa paciente, médico, fecha y motivo.");
+        }
+        Paciente paciente = pacientes.findById(formulario.getIdPaciente())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Paciente no encontrado."));
+        Usuario medico = usuarios.activosConPermiso("atenciones", "crear").stream()
+                .filter(u -> u.getIdUsuario().equals(formulario.getIdMedico())).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("El médico seleccionado no está disponible."));
+        // La fecha se escribe en hora de Lima y se guarda como instante (UTC).
+        Instant fecha = formulario.getFechaHora().atZone(ZonaHoraria.LIMA).toInstant();
+        if (!fecha.isAfter(Instant.now(auditoriaClock))) {
+            throw new IllegalArgumentException("La cita debe programarse en una fecha y hora futuras.");
+        }
+        if (citas.existsByMedico_IdUsuarioAndFechaHoraAndEstado(medico.getIdUsuario(), fecha, EstadoCita.PROGRAMADA)) {
+            throw new IllegalArgumentException("El médico ya tiene una cita programada a esa hora.");
+        }
+        Usuario registradora = usuarios.findById(operador.getIdUsuario())
+                .filter(u -> Boolean.TRUE.equals(u.getEstado()))
+                .orElseThrow(() -> new AccessDeniedException("La cuenta ya no está activa."));
+        Cita cita = new Cita(paciente, medico, registradora, fecha, formulario.getMotivo());
+        return citas.saveAndFlush(cita);
+    }
+
+    // Eliminación física: solo citas que no fueron atendidas (una atendida es historia clínica).
+    @Transactional
+    @Auditable(modulo = ModuloAuditoria.CITAS, accion = "ELIMINAR_CITA", entidad = "Cita")
+    public void eliminar(Usuario operador, Long idCita) {
+        exigir(operador, "EDITAR");
+        if (idCita == null || idCita <= 0) {
+            throw new IllegalArgumentException("El identificador de la cita no es válido.");
+        }
+        Cita cita = citas.findById(idCita)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cita no encontrada."));
+        if (cita.getEstado() == EstadoCita.ATENDIDA) {
+            throw new IllegalArgumentException("No se puede eliminar una cita ya atendida.");
+        }
+        citas.delete(cita);
+        citas.flush();
     }
 
     @Transactional
