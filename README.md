@@ -15,11 +15,11 @@ relaciones JPA, auditoría, gestión de usuarios y roles, frontend y control de 
 | **P2** | Auditoría de las operaciones (usuario, fecha y hora, operación, entidad, ID) | Edu |
 | **P3** | Gestión de usuarios y roles (backend) | José (usuarios) · Karim (roles) |
 | **P4** | Frontend de usuarios y roles | Se muestra como evidencia al demostrar Usuarios (José) y Roles (Karim); no se expone como tema aparte |
-| **P5** | Control de acceso según el rol y redirección tras el login | Leonel (demostración por rol) · Karim (reglas y backend) · José (parte compartida) |
+| **P5** | Control de acceso según el rol y redirección tras el login | Leonel (demostración por rol) · Karim (reglas y backend, en su sección) |
 
 | Integrante | Responsabilidad |
 | --- | --- |
-| **José Saith Rojas Condor** | P1: Usuario–Rol principal. P3: backend de usuarios. P5: control de acceso por rol, parte compartida (incluye el módulo de citas). |
+| **José Saith Rojas Condor** | P1: Usuario–Rol principal. P3: backend de usuarios. Módulo de citas (Recepción). |
 | **Karim Alexander Sovero Campoverde** | P1: Rol–Permiso. P3: backend de roles. P5: autorización y redirección. |
 | **Edu Edward Galindo Huaman** | P1: Usuario–roles adicionales. P2: auditoría. Complemento multirrol de P3. |
 | **Leonel Mathias Retamozo De la Cruz** | P1: Permiso–Rol (lado inverso). P5: demostración del control de acceso por rol. |
@@ -61,12 +61,11 @@ activo no puede desactivarse.
 3. Comprobar en SQL: `SELECT id_usuario, usuario, id_rol, estado FROM usuarios;`
 4. Intentar un DNI duplicado y explicar por qué el servidor lo rechaza.
 
-### P5 · Control de acceso por rol (parte compartida)
+### Módulo de citas (Recepción)
 
-José es el responsable de la sección compartida de la P5: la matriz de acceso por
-rol, los pacientes y atenciones del Médico y el **módulo de citas** del
-Recepcionista. Se describe en
-[P5 · Control de acceso por rol](#p5--control-de-acceso-por-rol-parte-compartida).
+José trabajó el **módulo de citas** del Recepcionista (programar, atender, cancelar
+y eliminar). El detalle y la tabla de acceso por rol están en
+[Control de acceso por rol](#control-de-acceso-por-rol-tabla-de-referencia).
 
 **Pruebas:** [`UsuarioGestionIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuarioGestionIntegrationTests.java)
 y [`CitasIntegrationTests`](src/test/java/com/evaluacion01/tecsup/CitasIntegrationTests.java).
@@ -201,7 +200,7 @@ más fácil: **inicia sesión con cada rol y muestra que cada uno solo ve lo suy
 
 El documento pide que cada rol **vea solo lo permitido**, que el acceso se **valide
 en el backend** y que el login **redirija según el rol** (matriz completa en
-[P5 · Control de acceso por rol](#p5--control-de-acceso-por-rol-parte-compartida)).
+[Control de acceso por rol](#control-de-acceso-por-rol-tabla-de-referencia)).
 
 - **Solo las opciones permitidas:** el menú cambia según el rol.
 - **Impide el acceso no autorizado:** abrir por la URL una pantalla no permitida
@@ -223,14 +222,11 @@ Guía individual: [docs/retamozo-evaluacion02.md](docs/retamozo-evaluacion02.md)
 
 ---
 
-## P5 · Control de acceso por rol (parte compartida)
+## Control de acceso por rol (tabla de referencia)
 
-**Responsable:** José Saith Rojas Condor.
-
-Las reglas de autorización y la redirección tras el login son de Karim, y los menús
-y las vistas de Leonel (ver sus secciones); esta parte compartida reúne el resultado
-completo por rol, los pacientes y atenciones del Médico y el módulo de citas del
-Recepcionista.
+Esta tabla reúne el acceso completo por rol. Las reglas de autorización y la
+redirección tras el login están en la sección de Karim; la demostración por rol, en
+la de Leonel.
 
 El enunciado da este ejemplo de acceso y el sistema lo cumple:
 
