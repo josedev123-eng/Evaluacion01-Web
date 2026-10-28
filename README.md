@@ -7,6 +7,8 @@ relaciones JPA, auditoría, gestión de usuarios y roles, frontend y control de 
 
 ## Qué pide el enunciado y quién lo expone
 
+**Orden de exposición:** 1) José → 2) Karim → 3) Edu → 4) Leonel (la parte más sencilla).
+
 | Pregunta | Qué pide | Quién la expone |
 | --- | --- | --- |
 | **P1** | Relaciones entre entidades con Hibernate/JPA (mínimo dos por alumno) | Cada integrante, con su propia pareja de entidades |
@@ -164,8 +166,9 @@ Además guarda `resultado` (ÉXITO, FALLO o DENEGADO), `detalle`, origen (`ip`,
 - **Operaciones demostrables:** registro y modificación de usuarios, roles,
   permisos, pacientes, atenciones y citas; activación y desactivación; inicio de
   sesión correcto y fallido.
-- **Eliminación:** el sistema no borra registros, usa activación/desactivación y
-  conserva el historial; por eso no se demuestra una eliminación física.
+- **Eliminación:** una **cita no atendida se puede eliminar** desde `/citas`; la
+  operación queda en la auditoría como `ELIMINAR_CITA` con su ID. El resto de
+  entidades usa activación/desactivación para conservar el historial.
 - **Consulta:** `GET /auditoria`, solo para Administrador, con filtros por usuario,
   módulo, resultado y rango de fechas ([`AuditoriaController`](src/main/java/com/evaluacion01/tecsup/controller/AuditoriaController.java)).
 
@@ -182,40 +185,43 @@ y las pruebas `Auditoria*IntegrationTests`. Guía: [docs/auditoria.md](docs/audi
 
 ---
 
-## Leonel Mathias Retamozo De la Cruz — Frontend y relación inversa
+## Leonel Mathias Retamozo De la Cruz — Frontend (la parte más visual)
 
-### P1 · Relación Permiso–Rol, lado inverso (`@ManyToMany(mappedBy)`)
+Esta es la parte **más sencilla de exponer**: se trata sobre todo de **mostrar las
+pantallas funcionando**, sin explicar código complicado.
 
-- **Entidades:** [`Permiso`](src/main/java/com/evaluacion01/tecsup/entity/Permiso.java) → [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java).
-- **Anotación:** `@ManyToMany(mappedBy = "permisos")` en `Permiso.roles`.
-- **Base de datos:** reutiliza `rol_permisos`, sin otra tabla.
-- **CRUD:** la pantalla de permisos de un rol muestra los roles asociados a cada
-  permiso y se actualiza al guardar la asignación desde el lado propietario.
+### P1 · Relación Permiso–Rol (en palabras simples)
+
+- **Entidades:** [`Permiso`](src/main/java/com/evaluacion01/tecsup/entity/Permiso.java) y [`Rol`](src/main/java/com/evaluacion01/tecsup/entity/Rol.java).
+- **Qué decir:** es la **misma tabla `rol_permisos`** que usa Karim, pero mirada al
+  revés: desde un permiso se puede saber **qué roles lo usan**. Se logra con
+  `@ManyToMany(mappedBy = "permisos")` en `Permiso.roles` y **no crea otra tabla**.
+- **Dónde se ve:** en la pantalla de permisos de un rol.
 
 ### P4 · Frontend de usuarios y roles
 
-| Lo que pide el enunciado | Pantalla |
+| Lo que pide el enunciado | Pantalla a mostrar |
 | --- | --- |
-| Usuarios: formulario de registro, edición y selección del rol | [`formulario.html`](src/main/resources/templates/formulario.html) |
-| Usuarios: listado y activación/desactivación | Tabla de la misma pantalla `/usuarios` |
-| Roles: formulario de registro y edición | [`roles/form-rol.html`](src/main/resources/templates/roles/form-rol.html) |
-| Roles: listado y activación/desactivación | [`roles/lista-roles.html`](src/main/resources/templates/roles/lista-roles.html) |
-| Asignación de permisos | [`roles/asignar-permisos.html`](src/main/resources/templates/roles/asignar-permisos.html) |
+| Usuarios: registrar, editar y elegir el rol | [`formulario.html`](src/main/resources/templates/formulario.html) (pantalla `/usuarios`) |
+| Usuarios: listado y activar/desactivar | La misma tabla de `/usuarios` |
+| Roles: registrar y editar | [`roles/form-rol.html`](src/main/resources/templates/roles/form-rol.html) |
+| Roles: listado y activar/desactivar | [`roles/lista-roles.html`](src/main/resources/templates/roles/lista-roles.html) |
+| Asignar permisos a un rol | [`roles/asignar-permisos.html`](src/main/resources/templates/roles/asignar-permisos.html) |
 
-Las interfaces trabajan contra el backend: no hace falta tocar la base de datos.
-Los formularios llevan token CSRF y escapan el texto que muestran.
+Las pantallas trabajan contra el backend: **no hace falta tocar la base de datos**.
 
-### P5 · Parte visual
+### P5 · Parte visual (el menú)
 
 [`fragments/navegacion.html`](src/main/resources/templates/fragments/navegacion.html)
-muestra solo las opciones permitidas según el rol. Ocultar un botón no es la
-seguridad: el backend vuelve a validar cada acción.
+muestra **solo las opciones permitidas** según el rol. Basta con comparar el menú de
+un Administrador con el de un Médico.
 
-### Demostración
+### Demostración (fácil, solo clics)
 
-1. Mostrar el formulario de usuarios (área, rol principal y adicionales, DNI).
-2. En **Roles → Permisos**, mostrar la consulta inversa de roles asociados.
-3. Comparar el menú de un Administrador con el de un usuario de solo consulta.
+1. Entrar como Administrador y abrir **Usuarios**: registrar una cuenta y mostrar el
+   listado con los botones de editar y activar/desactivar.
+2. Abrir **Roles**: registrar un rol y, en **Permisos**, marcar y guardar permisos.
+3. Comparar el menú de un Administrador con el de un usuario con menos permisos.
 
 **Pruebas:** [`PermisoRolInversoIntegrationTests`](src/test/java/com/evaluacion01/tecsup/PermisoRolInversoIntegrationTests.java),
 [`UsuariosFrontendIntegrationTests`](src/test/java/com/evaluacion01/tecsup/UsuariosFrontendIntegrationTests.java),
@@ -262,9 +268,9 @@ Guía: [docs/modulo-clinico.md](docs/modulo-clinico.md).
 | --- | --- |
 | Programar cita | Paciente, médico, fecha y hora (hora de Lima) y motivo. Solo hacia el futuro; un médico no tiene dos citas programadas a la misma hora; el médico debe tener una cuenta activa con permiso de atender |
 | Listar agenda | Administrador y Recepción ven todas; cada Médico ve únicamente las suyas (lo decide el servidor, no la URL) |
-| Atender / cancelar | Una cita solo cambia de PROGRAMADA a ATENDIDA o CANCELADA; no se elimina |
+| Atender / cancelar / eliminar | Una cita pasa de PROGRAMADA a ATENDIDA o CANCELADA; una cita no atendida se puede eliminar |
 | Relación JPA | [`Cita`](src/main/java/com/evaluacion01/tecsup/entity/Cita.java): `@ManyToOne` a `Paciente` y a `Usuario` (médico y quien la programó) |
-| Auditoría | `REGISTRAR_CITA`, `ATENDER_CITA`, `CANCELAR_CITA` (módulo `CITAS`), sin nombres ni DNI |
+| Auditoría | `REGISTRAR_CITA`, `ATENDER_CITA`, `CANCELAR_CITA`, `ELIMINAR_CITA` (módulo `CITAS`); registrar y eliminar usan AOP (`@Auditable`), sin nombres ni DNI |
 
 Código: [`CitaService`](src/main/java/com/evaluacion01/tecsup/service/CitaService.java),
 [`CitaController`](src/main/java/com/evaluacion01/tecsup/controller/CitaController.java),
@@ -315,9 +321,9 @@ Abre `http://127.0.0.1:8095/login`.
 ./mvnw test
 ```
 
-- **301 pruebas**, con H2 en memoria (no tocan tu MySQL).
+- **304 pruebas**, con H2 en memoria (no tocan tu MySQL).
 - Con **JDK 21** pasan todas. Con **JDK 25** fallan las 6 de `AuditoriaServiceTest`
-  por incompatibilidad de Mockito con esa versión de Java; las otras 295 pasan.
+  por incompatibilidad de Mockito con esa versión de Java; las otras 298 pasan.
 - Ejecución contra servidor SQL real comprobada en **MariaDB 10.4 (XAMPP)**; MySQL 8
   no se ha probado.
 

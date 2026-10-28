@@ -44,6 +44,7 @@
             <div class="col-md-4">
                 <label class="form-label" for="fechaNacimiento">Fecha de nacimiento</label>
                 <input type="date" th:field="*{fechaNacimiento}" class="form-control" required th:max="${#temporals.format(#temporals.createToday(), 'yyyy-MM-dd')}">
+                <div id="edadCalculada" class="form-text" aria-live="polite"></div>
             </div>
             <div class="col-md-4">
                 <label class="form-label" for="telefono">Teléfono (opcional)</label>
@@ -58,5 +59,6 @@
     <p class="small text-muted mt-3">Demostración académica: utiliza únicamente datos ficticios.</p>
 </main>
 <script th:src="@{/js/reniec.js}" defer></script>
+<script th:src="@{/js/edad-paciente.js}" defer></script>
 </body>
 </html>
